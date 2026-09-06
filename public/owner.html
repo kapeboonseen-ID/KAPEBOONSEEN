@@ -63,10 +63,11 @@
           <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">PIN Master Owner</label>
           <input type="password" id="ownerPinInput" required placeholder="Masukkan PIN Owner"
             class="w-full px-3 py-2.5 text-center tracking-widest text-lg font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] focus:border-[#8B5A2B] outline-none">
-          <p class="text-[11px] text-gray-400 mt-1 text-center">PIN Master Owner: <strong>200295</strong></p>
         </div>
 
-        <button type="submit" class="w-full btn-coffee py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+        <div id="ownerLoginError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs text-center font-medium"></div>
+
+        <button type="submit" id="btnOwnerLoginSubmit" class="w-full btn-coffee py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-md">
           <i data-lucide="unlock" class="w-4 h-4"></i>
           <span>Buka Dashboard</span>
         </button>

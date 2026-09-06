@@ -51,7 +51,10 @@ function getAuthHeaders() {
 }
 
 // Verifikasi PIN Owner
-async function verifyOwnerAccess() {
+async function verifyOwnerAccess(isManualSubmit = false) {
+  const errBox = document.getElementById('ownerLoginError');
+  if (errBox && isManualSubmit) errBox.classList.add('hidden');
+
   if (!ownerPin) {
     document.getElementById('ownerLoginModal').classList.remove('hidden');
     return false;
@@ -63,18 +66,49 @@ async function verifyOwnerAccess() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin: ownerPin })
     });
-    const data = await res.json();
+
+    if (res.status === 404) {
+      if (errBox && isManualSubmit) {
+        errBox.innerHTML = '⚠️ <strong>Server API Vercel belum aktif (404).</strong><br><span class="text-[11px]">Pastikan folder <code>api/</code> dan file <code>vercel.json</code> sudah di-upload ke GitHub.</span>';
+        errBox.classList.remove('hidden');
+      }
+      showToast('Server API belum aktif (404)', 'error');
+      return false;
+    }
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      if (errBox && isManualSubmit) {
+        errBox.textContent = 'Gagal membaca respon server. Mohon refresh halaman atau periksa koneksi.';
+        errBox.classList.remove('hidden');
+      }
+      return false;
+    }
+
     if (data.success) {
       document.getElementById('ownerLoginModal').classList.add('hidden');
+      if (errBox) errBox.classList.add('hidden');
+      if (isManualSubmit) showToast('Login Berhasil! Selamat datang, Owner.', 'success');
       loadTabContent(currentTab);
       return true;
     } else {
       localStorage.removeItem('owner_auth_pin');
       ownerPin = '';
       document.getElementById('ownerLoginModal').classList.remove('hidden');
+      if (isManualSubmit && errBox) {
+        errBox.textContent = data.message || 'PIN Master Owner salah! Silakan periksa kembali.';
+        errBox.classList.remove('hidden');
+        document.getElementById('ownerPinInput')?.select();
+      }
       return false;
     }
   } catch (err) {
+    if (errBox && isManualSubmit) {
+      errBox.textContent = 'Koneksi ke server gagal: ' + err.message;
+      errBox.classList.remove('hidden');
+    }
     showToast('Koneksi ke server gagal: ' + err.message, 'error');
     return false;
   }
@@ -601,13 +635,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Login Owner Modal
   const ownerLoginForm = document.getElementById('ownerLoginForm');
+  const btnSubmit = document.getElementById('btnOwnerLoginSubmit');
   if (ownerLoginForm) {
-    ownerLoginForm.addEventListener('submit', (e) => {
+    ownerLoginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const pin = document.getElementById('ownerPinInput').value.trim();
+      if (!pin) return;
+
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `
+          <span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          <span>Memverifikasi PIN...</span>
+        `;
+      }
+
       ownerPin = pin;
       localStorage.setItem('owner_auth_pin', pin);
-      verifyOwnerAccess();
+      try {
+        await verifyOwnerAccess(true);
+      } finally {
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `
+            <i data-lucide="unlock" class="w-4 h-4"></i>
+            <span>Buka Dashboard</span>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+      }
     });
   }
 
