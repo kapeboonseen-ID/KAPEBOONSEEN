@@ -80,6 +80,7 @@ function isOwnerAuthorized(req) {
 
 // Request Handler Utama
 async function handleRequest(req, res) {
+  const parsedUrl = url.parse(req.url || '/', true);
   let pathname = parsedUrl.pathname || '/';
   if (!pathname.startsWith('/api/') && pathname !== '/api') {
     if (pathname.startsWith('/admin/') || pathname.startsWith('/auth/') || 
@@ -435,8 +436,8 @@ async function handleRequest(req, res) {
 
   const filePath = path.join(PUBLIC_DIR, safePath);
 
-  fs.stat(filePath, (err, stats) => {
-    if (err || !stats.isFile()) {
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
       // Fallback 404
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       return res.end('404 Not Found');
@@ -446,8 +447,7 @@ async function handleRequest(req, res) {
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
     res.writeHead(200, { 'Content-Type': contentType });
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
+    res.end(data);
   });
 }
 
