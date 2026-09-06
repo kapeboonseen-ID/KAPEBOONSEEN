@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Absensi Crew - KAPEBOONSEEN</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-[#FAF7F2] min-h-screen text-[#2C1810] flex flex-col justify-between">
+
+  <!-- Header Kedai -->
+  <header class="coffee-header px-4 py-4 shadow-md">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-11 w-11 rounded-xl bg-white/10 p-1 flex items-center justify-center border border-white/20 shadow-inner">
+          <img src="/images/logo.png" alt="Logo KAPEBOONSEEN" class="h-full w-full object-contain logo-white">
+        </div>
+        <div>
+          <h1 id="headerShopName" class="text-lg font-black tracking-wider uppercase">KAPEBOONSEEN</h1>
+          <p class="text-[11px] text-[#E6CCB2] flex items-center gap-1.5 font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+            Sistem Presensi Crew Online
+          </p>
+        </div>
+      </div>
+      <div id="userBadgeArea" class="hidden">
+        <button id="btnLogout" class="text-xs bg-black/20 hover:bg-black/30 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>Keluar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Konten Utama (Mobile-First Container) -->
+  <main class="flex-1 max-w-md w-full mx-auto p-4 space-y-4">
+
+    <!-- 1. Form Login Pegawai (Tampil jika belum login) -->
+    <section id="loginSection" class="coffee-card p-6 space-y-5">
+      <div class="text-center space-y-1">
+        <div class="mb-3">
+          <img src="/images/logo.png" alt="Logo KAPEBOONSEEN" class="h-16 w-auto mx-auto object-contain drop-shadow-sm">
+        </div>
+        <h2 class="text-xl font-black tracking-wide text-[#3A2010] uppercase">Presensi Crew</h2>
+        <p class="text-xs text-gray-500">Silakan masukkan ID Pegawai dan PIN untuk memulai absensi</p>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">ID Pegawai</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <i data-lucide="badge" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="loginEmployeeId" required placeholder="Contoh: BRS-01 atau KSR-01" 
+              class="w-full pl-9 pr-3 py-2.5 text-sm uppercase rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] focus:border-[#8B5A2B] outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">PIN / Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+            </span>
+            <input type="password" id="loginPin" required placeholder="4-6 digit PIN" maxlength="10"
+              class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] focus:border-[#8B5A2B] outline-none">
+          </div>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="w-full btn-coffee py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-md">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Masuk & Lakukan Absensi</span>
+        </button>
+      </form>
+
+      <div class="pt-3 border-t border-gray-100 text-center">
+        <p class="text-[11px] text-gray-500">
+          Belum punya PIN atau lupa? Tanyakan ke Owner kedai.
+        </p>
+      </div>
+    </section>
+
+    <!-- 2. Panel Absensi Crew (Tampil setelah login) -->
+    <div id="attendanceSection" class="hidden space-y-4">
+
+      <!-- Kartu Profil Pegawai -->
+      <div class="coffee-card p-4 flex items-center justify-between border-l-4 border-l-[#5E391C]">
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Selamat Datang,</p>
+          <h2 id="crewName" class="text-lg font-bold text-[#3A2010] leading-tight">Nama Crew</h2>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="crewRole" class="text-xs bg-amber-100 text-amber-900 font-medium px-2 py-0.5 rounded-md">Barista</span>
+            <span id="crewIdTag" class="text-xs text-gray-500 font-mono">ID: BRS-01</span>
+            <button id="btnOpenChangePin" type="button" class="text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-950 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1 border border-amber-300 shadow-sm transition">
+              <i data-lucide="key" class="w-3 h-3 text-amber-700"></i>
+              <span>Ganti PIN</span>
+            </button>
+          </div>
+        </div>
+        <div class="text-right">
+          <span id="todayDateDisplay" class="text-xs font-semibold text-gray-600 block">Minggu, 6 Sep 2026</span>
+          <span id="liveClock" class="text-xl font-black text-[#5E391C] font-mono tracking-wider">08:00:00</span>
+        </div>
+      </div>
+
+      <!-- Kartu Status GPS & Radius Kedai -->
+      <div class="coffee-card p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div id="gpsIconBox" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-700">Lokasi GPS Kedai</p>
+              <p id="gpsStatusText" class="text-[11px] text-gray-500">Mendeteksi posisi GPS HP Anda...</p>
+            </div>
+          </div>
+          <button id="btnRefreshGps" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg flex items-center gap-1 font-medium transition">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            <span>Perbarui</span>
+          </button>
+        </div>
+
+        <div id="gpsBanner" class="p-2.5 rounded-xl text-xs flex items-center justify-between bg-amber-50 text-amber-900 border border-amber-200">
+          <span id="gpsDistanceInfo" class="font-medium">Memeriksa jarak ke kedai...</span>
+          <span id="gpsBadge" class="badge-status bg-amber-100 text-amber-800">Cek GPS</span>
+        </div>
+      </div>
+
+      <!-- Kartu Aksi Tombol Check-In / Check-Out -->
+      <div class="coffee-card p-6 text-center space-y-4">
+        <div id="attendanceStateView">
+          <!-- Dynamic: Diisi oleh JavaScript tergantung status: Belum Check-in / Sudah Check-in / Selesai -->
+        </div>
+      </div>
+
+      <!-- Kartu Rekapan Jam Kerja Pegawai (Harian, Mingguan, Bulanan) -->
+      <div class="coffee-card p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="clock" class="w-4 h-4 text-[#5E391C]"></i>
+            <h3 class="font-bold text-sm text-[#3A2010]">Rekapan Jam Kerja Anda</h3>
+          </div>
+          <span class="text-[11px] text-gray-400">Pribadi</span>
+        </div>
+
+        <!-- 3 Grid Ringkasan Waktu Kerja -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <!-- Hari Ini -->
+          <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
+            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Hari Ini</p>
+            <p id="sumTodayHours" class="text-sm font-black text-[#5E391C] mt-0.5">0 Jam 0 Menit</p>
+            <p id="sumTodayMinutes" class="text-[10px] text-gray-500 mt-0.5">Total 0 Menit</p>
+          </div>
+
+          <!-- Minggu Ini -->
+          <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-100">
+            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Minggu Ini</p>
+            <p id="sumWeekHours" class="text-sm font-black text-blue-900 mt-0.5">0 Jam 0 Menit</p>
+            <p id="sumWeekMinutes" class="text-[10px] text-gray-500 mt-0.5">Total 0 Menit</p>
+          </div>
+
+          <!-- Bulan Ini -->
+          <div class="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
+            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Bulan Ini</p>
+            <p id="sumMonthHours" class="text-sm font-black text-emerald-900 mt-0.5">0 Jam 0 Menit</p>
+            <p id="sumMonthMinutes" class="text-[10px] text-gray-500 mt-0.5">Total 0 Menit</p>
+          </div>
+        </div>
+
+        <!-- Riwayat Terakhir -->
+        <div class="pt-2">
+          <p class="text-xs font-bold text-gray-700 mb-2">Riwayat Kehadiran Terbaru</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-gray-400 border-b border-gray-100">
+                  <th class="pb-1 font-semibold">Tanggal</th>
+                  <th class="pb-1 font-semibold">Masuk</th>
+                  <th class="pb-1 font-semibold">Pulang</th>
+                  <th class="pb-1 font-semibold text-right">Total Jam</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody" class="divide-y divide-gray-50">
+                <tr>
+                  <td colspan="4" class="py-3 text-center text-gray-400">Belum ada riwayat</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer Navigasi & Link Owner -->
+  <footer class="max-w-md w-full mx-auto p-4 text-center space-y-2">
+    <div class="flex items-center justify-center gap-4 text-xs">
+      <a href="/owner.html" class="text-[#8B5A2B] hover:text-[#5E391C] font-semibold flex items-center gap-1">
+        <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+        <span>Login Owner / Pemilik</span>
+      </a>
+      <span class="text-gray-300">•</span>
+      <a href="/print-qr.html" target="_blank" class="text-gray-500 hover:text-gray-700 flex items-center gap-1">
+        <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+        <span>Cetak Barcode Kedai</span>
+      </a>
+    </div>
+    <p class="text-[10px] text-gray-400">&copy; KAPEBOONSEEN - Sistem Absensi v1.0</p>
+  </footer>
+
+  <!-- Modal Ganti PIN Pribadi Crew -->
+  <div id="changePinModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-6 max-w-sm w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center">
+            <i data-lucide="key" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-sm text-[#3A2010]">Ganti PIN Akun Pribadi</h3>
+        </div>
+        <button id="btnCloseChangePinModal" type="button" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="changePinForm" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">PIN Lama Saat Ini</label>
+          <input type="password" id="oldPinInput" required placeholder="Masukkan PIN lama" maxlength="10"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">PIN Baru (Min. 4 Angka/Huruf)</label>
+          <input type="password" id="newPinInput" required placeholder="Masukkan PIN baru" minlength="4" maxlength="10"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">Konfirmasi PIN Baru</label>
+          <input type="password" id="confirmPinInput" required placeholder="Ulangi PIN baru" minlength="4" maxlength="10"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-mono">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+          <button type="button" id="btnCancelChangePin" class="px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium">Batal</button>
+          <button type="submit" id="btnSaveNewPin" class="btn-coffee px-4 py-2 rounded-lg font-bold flex items-center gap-1 shadow">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Simpan PIN Baru</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notifikasi Ringan -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold hidden z-50 transition-all max-w-[90%] text-center">
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

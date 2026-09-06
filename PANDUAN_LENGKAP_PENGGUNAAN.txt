@@ -1,0 +1,62 @@
+====================================================================
+  PANDUAN PENGGUNAAN SISTEM ABSENSI KEDAI KOPI BOONSEEN (KLIK-BY-KLIK)
+====================================================================
+
+Selamat! Sistem absensi kedai kopi Anda sekarang sudah dilengkapi dengan
+fitur MENJALANKAN DI LATAR BELAKANG TANPA JENDELA CMD!
+
+--------------------------------------------------------------------
+CARA 1: MENYALAKAN SISTEM SENYAP (TANPA JENDELA CMD) - DISARANKAN
+--------------------------------------------------------------------
+1. Buka folder: D:\RASKA NOVANPURIAN\WORKSPACE\KAPEBOONSEEN\aplikasi
+2. Cari file bernama: "JALANKAN_TANPA_CMD.vbs"
+3. Klik 2x (double-click) pada file tersebut.
+4. Akan muncul notifikasi kecil: "Sistem Absensi berhasil dijalankan di latar belakang!"
+5. Browser Anda akan terbuka otomatis ke halaman absensi.
+*TIDAK ADA JENDELA HITAM (CMD) YANG MUNCUL ATAU MENGGANGGU DI LAYAR.*
+
+--------------------------------------------------------------------
+CARA MEMATIKAN SISTEM:
+--------------------------------------------------------------------
+Saat kedai tutup dan Anda ingin mematikan server absensi:
+1. Cari file bernama: "HENTIKAN_APLIKASI.bat"
+2. Klik 2x (double-click) pada file tersebut.
+3. Server absensi di latar belakang akan langsung mati secara bersih.
+
+--------------------------------------------------------------------
+BONUS: MEMBUAT SISTEM OTOMATIS MENYALA SAAT KOMPUTER DIHIDUPKAN
+--------------------------------------------------------------------
+Jika Anda tidak mau repot mengklik file setiap hari:
+1. Klik 2x file: "ATUR_OTOMATIS_STARTUP.bat"
+2. Ketik angka 1 lalu tekan Enter.
+3. Selesai! Mulai sekarang, setiap kali komputer kedai dinyalakan,
+   server absensi akan otomatis langsung aktif di latar belakang.
+
+--------------------------------------------------------------------
+PENGATURAN AWAL OLEH OWNER (HANYA DILAKUKAN 1 KALI)
+--------------------------------------------------------------------
+1. Buka alamat: http://localhost:3000/owner.html
+2. Masukkan PIN Master Pemilik (PIN Awal: 123456) lalu klik "Buka Dashboard".
+3. Masuk ke tab "Pengaturan Kedai & GPS":
+   - Klik tombol "📍 Gunakan Lokasi Saya Saat Ini" (pastikan Anda membuka laptop di kedai).
+   - Masukkan batas jarak radius (disarankan 50 meter).
+   - Klik "Simpan Perubahan Pengaturan".
+4. Masuk ke tab "Kelola Pegawai" untuk menambah/mengubah PIN pegawai Anda.
+
+--------------------------------------------------------------------
+MENCETAK BARCODE MEJA KASIR
+--------------------------------------------------------------------
+1. Buka alamat: http://localhost:3000/print-qr.html
+2. Tekan tombol "🖨️ Cetak Poster (Print)" atau tekan Ctrl + P.
+3. Tempelkan kertas barcode di meja kasir.
+
+--------------------------------------------------------------------
+ALUR ABSENSI PEGAWAI:
+--------------------------------------------------------------------
+- Pegawai Scan barcode -> Masukkan ID & PIN -> Klik "CHECK IN SEKARANG".
+  (Sistem otomatis mengecek GPS agar pegawai wajib berada di kedai, dan hanya bisa 1x sehari).
+- Saat jam pulang, pegawai buka web -> Klik "CHECK OUT (PULANG)".
+  (Sistem menghitung total jam & menit kerja hari itu).
+- Pegawai hanya bisa melihat rekap dirinya sendiri (hari ini, minggu ini, bulan ini).
+- Owner bisa melihat semua rekap dan download file Excel (CSV) di Dashboard Owner.
+====================================================================

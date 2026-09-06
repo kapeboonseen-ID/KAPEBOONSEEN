@@ -1,0 +1,21 @@
+{
+  "name": "absensi-kape-boonseen",
+  "version": "1.0.0",
+  "description": "Sistem Absensi Barcode & Geofencing GPS untuk Kedai Kopi Kape Boonseen",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "absensi",
+    "coffee-shop",
+    "kapeboonseen",
+    "qr-code",
+    "gps"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "author": "KAPEBOONSEEN",
+  "license": "ISC"
+}
