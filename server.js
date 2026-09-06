@@ -80,8 +80,14 @@ function isOwnerAuthorized(req) {
 
 // Request Handler Utama
 async function handleRequest(req, res) {
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
+  let pathname = parsedUrl.pathname || '/';
+  if (!pathname.startsWith('/api/') && pathname !== '/api') {
+    if (pathname.startsWith('/admin/') || pathname.startsWith('/auth/') || 
+        pathname.startsWith('/attendance/') || pathname.startsWith('/settings/') || 
+        pathname === '/server-info') {
+      pathname = '/api' + pathname;
+    }
+  }
   const method = req.method;
 
   // Tangani preflight CORS
