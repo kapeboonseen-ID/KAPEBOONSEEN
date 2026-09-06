@@ -104,7 +104,7 @@ async function handleRequest(req, res) {
   // ===================== API ROUTES =====================
   if (pathname.startsWith('/api/')) {
     try {
-      // 0. Info Server & Tautan Barcode HP (WiFi / Cloudflare HTTPS)
+      // 0. Info Server & Tautan Barcode HP (WiFi / Cloudflare HTTPS / Cloud Vercel)
       if (pathname === '/api/server-info' && method === 'GET') {
         const ips = getLocalIpAddresses();
         let tunnelUrl = null;
@@ -112,16 +112,24 @@ async function handleRequest(req, res) {
         if (fs.existsSync(tunnelFile)) {
           try { tunnelUrl = fs.readFileSync(tunnelFile, 'utf8').trim(); } catch (e) {}
         }
+
+        const host = req.headers['x-forwarded-host'] || req.headers['host'];
+        const proto = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http');
+        const isCloud = host && !host.includes('localhost') && !host.includes('127.0.0.1');
+        const cloudUrl = isCloud ? `${proto}://${host}` : null;
+
         const localUrl = ips.length > 0 ? `http://${ips[0]}:${PORT}` : `http://localhost:${PORT}`;
-        const activeUrl = tunnelUrl || localUrl;
+        const activeUrl = cloudUrl || tunnelUrl || localUrl;
+
         return sendJson(res, 200, {
           success: true,
           port: PORT,
+          cloud_url: cloudUrl,
           local_ip: ips.length > 0 ? ips[0] : 'localhost',
           local_url: localUrl,
           tunnel_url: tunnelUrl,
           active_url: activeUrl,
-          is_https: !!tunnelUrl
+          is_https: !!cloudUrl || !!tunnelUrl
         });
       }
 

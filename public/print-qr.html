@@ -147,39 +147,41 @@
       } catch (e) {}
 
       const input = document.getElementById('qrUrlInput');
+      // Jika dibuka di domain publik (misal Vercel), utamakan domain saat ini!
       let targetUrl = window.location.origin;
 
-      // Ambil URL Akses HP dari Server (Tunnel HTTPS atau IP WiFi Lokal)
-      try {
-        const infoRes = await fetch('/api/server-info');
-        const info = await infoRes.json();
-        if (info.active_url && !info.active_url.includes('localhost')) {
-          targetUrl = info.active_url;
-        } else if (info.local_url && !info.local_url.includes('localhost')) {
-          targetUrl = info.local_url;
-        }
-      } catch (e) {}
+      // Hanya cari tunnel/IP lokal jika dibuka di localhost komputer
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        try {
+          const infoRes = await fetch('/api/server-info');
+          const info = await infoRes.json();
+          if (info.tunnel_url && info.tunnel_url.startsWith('https://')) {
+            targetUrl = info.tunnel_url;
+          } else if (info.local_url && !info.local_url.includes('localhost')) {
+            targetUrl = info.local_url;
+          }
+        } catch (e) {}
+
+        let pollCount = 0;
+        const pollInterval = setInterval(async () => {
+          pollCount++;
+          if (pollCount > 10) return clearInterval(pollInterval);
+          try {
+            const res = await fetch('/api/server-info');
+            const d = await res.json();
+            if (d.tunnel_url && input.value !== d.tunnel_url) {
+              input.value = d.tunnel_url;
+              generateQr(d.tunnel_url);
+              updateStatusBanner(d.tunnel_url);
+              clearInterval(pollInterval);
+            }
+          } catch (e) {}
+        }, 1500);
+      }
 
       input.value = targetUrl;
       generateQr(targetUrl);
       updateStatusBanner(targetUrl);
-
-      // Polling sebentar jika tunnel baru menyala dalam 5-10 detik pertama
-      let pollCount = 0;
-      const pollInterval = setInterval(async () => {
-        pollCount++;
-        if (pollCount > 10) return clearInterval(pollInterval);
-        try {
-          const res = await fetch('/api/server-info');
-          const d = await res.json();
-          if (d.tunnel_url && input.value !== d.tunnel_url) {
-            input.value = d.tunnel_url;
-            generateQr(d.tunnel_url);
-            updateStatusBanner(d.tunnel_url);
-            clearInterval(pollInterval);
-          }
-        } catch (e) {}
-      }, 1500);
 
       document.getElementById('btnRegenerateQr').addEventListener('click', () => {
         const val = input.value.trim() || targetUrl;

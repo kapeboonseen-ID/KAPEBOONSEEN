@@ -603,15 +603,15 @@ async function openMobileOwnerQrModal() {
   document.getElementById('mobileOwnerQrModal').classList.remove('hidden');
 
   let targetUrl = window.location.origin + '/owner.html';
-  try {
-    const res = await fetch('/api/server-info');
-    const d = await res.json();
-    if (d.active_url && !d.active_url.includes('localhost')) {
-      targetUrl = d.active_url + '/owner.html';
-    } else if (d.local_url && !d.local_url.includes('localhost')) {
-      targetUrl = d.local_url + '/owner.html';
-    }
-  } catch (e) {}
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    try {
+      const res = await fetch('/api/server-info');
+      const d = await res.json();
+      if (d.tunnel_url && d.tunnel_url.startsWith('https://')) {
+        targetUrl = d.tunnel_url + '/owner.html';
+      }
+    } catch (e) {}
+  }
 
   container.innerHTML = '';
   ownerQrInstance = new QRCode(container, {
@@ -681,6 +681,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnOpenMobileOwnerQr')?.addEventListener('click', openMobileOwnerQrModal);
   document.getElementById('btnCloseMobileOwnerQrModal')?.addEventListener('click', closeMobileOwnerQrModal);
   document.getElementById('btnDoneMobileOwnerQr')?.addEventListener('click', closeMobileOwnerQrModal);
+  document.getElementById('btnCopyOwnerUrl')?.addEventListener('click', () => {
+    const urlText = document.getElementById('ownerMobileQrUrlText').textContent.trim();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(urlText).then(() => {
+        showToast('Link Dashboard HP berhasil disalin!', 'success');
+      }).catch(() => {
+        showToast('Tautan: ' + urlText);
+      });
+    } else {
+      showToast('Tautan: ' + urlText);
+    }
+  });
 
   // Button Refreshes
   document.getElementById('btnRefreshDaily')?.addEventListener('click', loadDailyRecap);

@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Dashboard Owner - KAPEBOONSEEN</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,39 +11,53 @@
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    /* Styling khusus agar sangat mulus di HP */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
 </head>
-<body class="bg-[#FAF7F2] min-h-screen text-[#2C1810]">
+<body class="bg-[#FAF7F2] min-h-screen text-[#2C1810] flex flex-col justify-between overflow-x-hidden">
 
-  <!-- Header Dashboard Owner -->
-  <header class="coffee-header px-6 py-4 shadow-md">
-    <div class="max-w-6xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="h-11 w-11 rounded-xl bg-white/10 p-1 flex items-center justify-center border border-white/20 shadow-inner">
+  <!-- Header Dashboard Owner (Sangat Rapi di Layar HP) -->
+  <header class="coffee-header px-3 sm:px-6 py-2.5 sm:py-3.5 shadow-md sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+      
+      <!-- Logo & Nama Kedai -->
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div class="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white/10 p-1 flex items-center justify-center border border-white/20 shadow-inner flex-shrink-0">
           <img src="/images/logo.png" alt="Logo KAPEBOONSEEN" class="h-full w-full object-contain logo-white">
         </div>
-        <div>
-          <h1 id="ownerShopTitle" class="text-lg font-black tracking-wider uppercase">KAPEBOONSEEN</h1>
-          <p class="text-xs text-[#E6CCB2]">Panel Kontrol Pemilik / Owner</p>
+        <div class="truncate">
+          <h1 id="ownerShopTitle" class="text-sm sm:text-lg font-black tracking-wider uppercase truncate">KAPEBOONSEEN</h1>
+          <p class="text-[10px] sm:text-xs text-[#E6CCB2] flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+            Panel Pemilik
+          </p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button id="btnOpenMobileOwnerQr" class="bg-amber-800/80 hover:bg-amber-800 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition font-semibold shadow">
-          <i data-lucide="smartphone" class="w-4 h-4"></i>
-          <span>Buka di HP</span>
+
+      <!-- Tombol Aksi Cepat Header -->
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <button id="btnOpenMobileOwnerQr" class="bg-amber-800/80 hover:bg-amber-800 text-white text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1.5 transition font-semibold shadow" title="Buka di HP / Tampilkan Barcode">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-amber-300"></i>
+          <span class="hidden md:inline">Buka di HP</span>
         </button>
-        <a href="/print-qr.html" target="_blank" class="bg-amber-800/60 hover:bg-amber-800 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-          <i data-lucide="printer" class="w-4 h-4"></i>
-          <span class="hidden sm:inline">Cetak Barcode Kedai</span>
+        <a href="/print-qr.html" target="_blank" class="bg-amber-900/60 hover:bg-amber-800 text-white text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1.5 transition" title="Cetak Barcode Meja Kasir">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Cetak Barcode</span>
         </a>
-        <a href="/" class="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-          <i data-lucide="coffee" class="w-4 h-4"></i>
-          <span class="hidden sm:inline">Halaman Absensi Crew</span>
+        <a href="/" class="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1.5 transition" title="Halaman Absensi Crew">
+          <i data-lucide="coffee" class="w-3.5 h-3.5 text-amber-200"></i>
+          <span class="hidden md:inline">Absensi</span>
         </a>
-        <button id="btnOwnerLogout" class="bg-rose-900/60 hover:bg-rose-900 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span>Keluar</span>
+        <button id="btnOwnerLogout" class="bg-rose-900/60 hover:bg-rose-900 text-white text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1.5 transition font-semibold" title="Keluar">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Keluar</span>
         </button>
       </div>
+
     </div>
   </header>
 
@@ -79,93 +93,100 @@
   </div>
 
   <!-- Konten Utama Dashboard Owner -->
-  <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+  <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
 
-    <!-- Navigasi Tab Menu -->
-    <nav class="flex flex-wrap gap-2 border-b border-amber-900/10 pb-3">
-      <button class="tab-btn active px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-[#5E391C] text-white" data-tab="tab-daily">
-        <i data-lucide="calendar" class="w-4 h-4"></i>
-        <span>Rekapan Harian</span>
+    <!-- Navigasi Tab Menu (Horizontal Swipe di Layar HP) -->
+    <nav class="flex gap-1.5 sm:gap-2 border-b border-amber-900/10 pb-2 overflow-x-auto no-scrollbar py-1">
+      <button class="tab-btn active px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#5E391C] text-white whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-daily">
+        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+        <span>Harian</span>
       </button>
-      <button class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-white text-gray-700 hover:bg-amber-50" data-tab="tab-weekly">
-        <i data-lucide="calendar-range" class="w-4 h-4"></i>
-        <span>Rekapan Mingguan</span>
+      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-weekly">
+        <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
+        <span>Mingguan</span>
       </button>
-      <button class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-white text-gray-700 hover:bg-amber-50" data-tab="tab-monthly">
-        <i data-lucide="calendar-days" class="w-4 h-4"></i>
-        <span>Rekapan Bulanan (Payroll)</span>
+      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-monthly">
+        <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i>
+        <span>Bulanan (Payroll)</span>
       </button>
-      <button class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-white text-gray-700 hover:bg-amber-50" data-tab="tab-employees">
-        <i data-lucide="users" class="w-4 h-4"></i>
+      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-employees">
+        <i data-lucide="users" class="w-3.5 h-3.5"></i>
         <span>Kelola Pegawai</span>
       </button>
-      <button class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-white text-gray-700 hover:bg-amber-50" data-tab="tab-settings">
-        <i data-lucide="settings" class="w-4 h-4"></i>
-        <span>Pengaturan Kedai & GPS</span>
+      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-settings">
+        <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+        <span>Lokasi & GPS</span>
       </button>
     </nav>
 
     <!-- ==================== TAB 1: REKAPAN HARIAN ==================== -->
-    <section id="tab-daily" class="tab-content space-y-4">
+    <section id="tab-daily" class="tab-content space-y-3 sm:space-y-4">
       <!-- Filter Bar -->
-      <div class="coffee-card p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Pilih Tanggal:</label>
-          <input type="date" id="dailyDatePicker" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 font-semibold focus:ring-2 focus:ring-[#8B5A2B] outline-none">
-          <button id="btnRefreshDaily" class="btn-coffee px-3 py-1.5 text-xs rounded-lg flex items-center gap-1">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-            <span>Muat Data</span>
+      <div class="coffee-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Tanggal:</label>
+          <input type="date" id="dailyDatePicker" class="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-xl border border-gray-300 font-semibold focus:ring-2 focus:ring-[#8B5A2B] outline-none">
+          <button id="btnRefreshDaily" class="btn-coffee px-3 py-1.5 text-xs rounded-xl flex items-center gap-1 flex-shrink-0 font-bold shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Muat</span>
           </button>
         </div>
-        <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-xs rounded-lg flex items-center gap-1 font-semibold transition">
+        <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+          <button onclick="window.print()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-semibold transition shadow-sm">
             <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-            <span>Cetak Rekapan</span>
+            <span>Cetak Rekap</span>
           </button>
-          <button id="btnExportDailyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-lg flex items-center gap-1 font-semibold transition">
+          <button id="btnExportDailyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-            <span>Ekspor Excel (CSV)</span>
+            <span>Ekspor CSV</span>
           </button>
         </div>
       </div>
 
-      <!-- Ringkasan Statistik Harian -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="coffee-card p-4 border-l-4 border-l-emerald-500">
-          <p class="text-xs font-semibold text-gray-500 uppercase">Total Hadir Hari Ini</p>
-          <h3 id="statDailyTotalPresent" class="text-2xl font-black text-emerald-700 mt-1">0 Pegawai</h3>
+      <!-- Ringkasan Statistik Harian (Responsive 2-kolom di HP) -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+        <div class="coffee-card p-3 sm:p-4 border-l-4 border-l-emerald-500">
+          <p class="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Hadir</p>
+          <h3 id="statDailyTotalPresent" class="text-base sm:text-2xl font-black text-emerald-700 mt-0.5">0 Pegawai</h3>
         </div>
-        <div class="coffee-card p-4 border-l-4 border-l-amber-500">
-          <p class="text-xs font-semibold text-gray-500 uppercase">Sedang Bertugas (Belum Pulang)</p>
-          <h3 id="statDailyActive" class="text-2xl font-black text-amber-600 mt-1">0 Pegawai</h3>
+        <div class="coffee-card p-3 sm:p-4 border-l-4 border-l-amber-500">
+          <p class="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Sedang Tugas</p>
+          <h3 id="statDailyActive" class="text-base sm:text-2xl font-black text-amber-600 mt-0.5">0 Pegawai</h3>
         </div>
-        <div class="coffee-card p-4 border-l-4 border-l-blue-500">
-          <p class="text-xs font-semibold text-gray-500 uppercase">Selesai Shift (Check-Out)</p>
-          <h3 id="statDailyCompleted" class="text-2xl font-black text-blue-700 mt-1">0 Pegawai</h3>
+        <div class="coffee-card p-3 sm:p-4 border-l-4 border-l-blue-500 col-span-2 sm:col-span-1">
+          <p class="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Selesai Shift (Pulang)</p>
+          <h3 id="statDailyCompleted" class="text-base sm:text-2xl font-black text-blue-700 mt-0.5">0 Pegawai</h3>
         </div>
       </div>
 
       <!-- Tabel Rekapan Harian -->
       <div class="coffee-card overflow-hidden">
-        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 class="font-bold text-sm text-[#3A2010]">Daftar Presensi Pegawai</h3>
-          <span id="dailyDateTitle" class="text-xs text-gray-500 font-medium">Tanggal: -</span>
+        <div class="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="font-bold text-xs sm:text-sm text-[#3A2010]">Daftar Presensi Pegawai</h3>
+          <span id="dailyDateTitle" class="text-[11px] sm:text-xs text-gray-500 font-medium">Tanggal: -</span>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
+
+        <!-- Hint Geser di HP -->
+        <div class="sm:hidden px-3 pt-2 text-[11px] text-amber-900 bg-amber-50/70 flex items-center gap-1.5 font-medium border-b border-amber-100 pb-1.5">
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-amber-700 flex-shrink-0"></i>
+          <span>Geser tabel ke samping untuk melihat jam, jarak & status lengkap &rarr;</span>
+        </div>
+
+        <div class="overflow-x-auto w-full">
+          <table class="w-full text-left text-xs min-w-[660px]">
             <thead class="bg-amber-50/70 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th class="p-3">ID Pegawai</th>
-                <th class="p-3">Nama Lengkap</th>
-                <th class="p-3">Jabatan</th>
-                <th class="p-3">Jam Masuk</th>
-                <th class="p-3">Jam Pulang</th>
-                <th class="p-3">Jarak GPS</th>
-                <th class="p-3">Total Jam Kerja</th>
-                <th class="p-3 text-center">Status</th>
+                <th class="p-2.5 sm:p-3">ID</th>
+                <th class="p-2.5 sm:p-3">Nama Lengkap</th>
+                <th class="p-2.5 sm:p-3">Jabatan</th>
+                <th class="p-2.5 sm:p-3">Masuk</th>
+                <th class="p-2.5 sm:p-3">Pulang</th>
+                <th class="p-2.5 sm:p-3">Jarak GPS</th>
+                <th class="p-2.5 sm:p-3">Durasi</th>
+                <th class="p-2.5 sm:p-3 text-center">Status</th>
               </tr>
             </thead>
-            <tbody id="dailyTableBody" class="divide-y divide-gray-100">
+            <tbody id="dailyTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
                 <td colspan="8" class="p-6 text-center text-gray-400">Memuat data presensi...</td>
               </tr>
@@ -176,41 +197,47 @@
     </section>
 
     <!-- ==================== TAB 2: REKAPAN MINGGUAN ==================== -->
-    <section id="tab-weekly" class="tab-content hidden space-y-4">
-      <div class="coffee-card p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+    <section id="tab-weekly" class="tab-content hidden space-y-3 sm:space-y-4">
+      <div class="coffee-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
-          <label class="text-xs font-bold text-gray-700">Rentang:</label>
-          <input type="date" id="weeklyStartDate" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 font-semibold outline-none">
+          <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Rentang:</label>
+          <input type="date" id="weeklyStartDate" class="flex-1 sm:flex-none px-2.5 py-1.5 text-xs rounded-xl border border-gray-300 font-semibold outline-none">
           <span class="text-xs text-gray-400">s/d</span>
-          <input type="date" id="weeklyEndDate" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 font-semibold outline-none">
-          <button id="btnRefreshWeekly" class="btn-coffee px-3 py-1.5 text-xs rounded-lg flex items-center gap-1">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+          <input type="date" id="weeklyEndDate" class="flex-1 sm:flex-none px-2.5 py-1.5 text-xs rounded-xl border border-gray-300 font-semibold outline-none">
+          <button id="btnRefreshWeekly" class="btn-coffee px-3 py-1.5 text-xs rounded-xl flex items-center gap-1 font-bold shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>Tampilkan</span>
           </button>
         </div>
-        <button id="btnExportWeeklyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-lg flex items-center gap-1 font-semibold transition">
+        <button id="btnExportWeeklyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
           <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
           <span>Ekspor CSV</span>
         </button>
       </div>
 
       <div class="coffee-card overflow-hidden">
-        <div class="p-4 border-b border-gray-100">
-          <h3 class="font-bold text-sm text-[#3A2010]">Akumulasi Jam Kerja Mingguan</h3>
+        <div class="p-3 sm:p-4 border-b border-gray-100">
+          <h3 class="font-bold text-xs sm:text-sm text-[#3A2010]">Akumulasi Jam Kerja Mingguan</h3>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
+
+        <div class="sm:hidden px-3 pt-2 text-[11px] text-amber-900 bg-amber-50/70 flex items-center gap-1.5 font-medium border-b border-amber-100 pb-1.5">
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-amber-700 flex-shrink-0"></i>
+          <span>Geser ke samping untuk melihat total hadir & durasi &rarr;</span>
+        </div>
+
+        <div class="overflow-x-auto w-full">
+          <table class="w-full text-left text-xs min-w-[550px]">
             <thead class="bg-amber-50/70 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th class="p-3">ID</th>
-                <th class="p-3">Nama Pegawai</th>
-                <th class="p-3">Jabatan</th>
-                <th class="p-3 text-center">Hari Hadir</th>
-                <th class="p-3 text-right">Total Menit</th>
-                <th class="p-3 text-right">Total Jam Kerja</th>
+                <th class="p-2.5 sm:p-3">ID</th>
+                <th class="p-2.5 sm:p-3">Nama Pegawai</th>
+                <th class="p-2.5 sm:p-3">Jabatan</th>
+                <th class="p-2.5 sm:p-3 text-center">Hari Hadir</th>
+                <th class="p-2.5 sm:p-3 text-right">Total Menit</th>
+                <th class="p-2.5 sm:p-3 text-right">Total Jam Kerja</th>
               </tr>
             </thead>
-            <tbody id="weeklyTableBody" class="divide-y divide-gray-100">
+            <tbody id="weeklyTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
                 <td colspan="6" class="p-6 text-center text-gray-400">Pilih rentang tanggal untuk melihat rekap mingguan.</td>
               </tr>
@@ -221,40 +248,46 @@
     </section>
 
     <!-- ==================== TAB 3: REKAPAN BULANAN (PAYROLL) ==================== -->
-    <section id="tab-monthly" class="tab-content hidden space-y-4">
-      <div class="coffee-card p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <label class="text-xs font-bold text-gray-700">Pilih Bulan:</label>
-          <input type="month" id="monthlyPicker" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 font-semibold outline-none">
-          <button id="btnRefreshMonthly" class="btn-coffee px-3 py-1.5 text-xs rounded-lg flex items-center gap-1">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+    <section id="tab-monthly" class="tab-content hidden space-y-3 sm:space-y-4">
+      <div class="coffee-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Pilih Bulan:</label>
+          <input type="month" id="monthlyPicker" class="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-xl border border-gray-300 font-semibold outline-none">
+          <button id="btnRefreshMonthly" class="btn-coffee px-3 py-1.5 text-xs rounded-xl flex items-center gap-1 font-bold shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>Tampilkan</span>
           </button>
         </div>
-        <button id="btnExportMonthlyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-lg flex items-center gap-1 font-semibold transition">
+        <button id="btnExportMonthlyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
           <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-          <span>Ekspor Laporan Bulanan (CSV)</span>
+          <span>Ekspor Laporan Payroll (CSV)</span>
         </button>
       </div>
 
       <div class="coffee-card overflow-hidden">
-        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 class="font-bold text-sm text-[#3A2010]">Rekapitulasi Bulanan Seluruh Pegawai</h3>
-          <p class="text-[11px] text-gray-500">Siap digunakan untuk acuan hitungan upah/gaji crew</p>
+        <div class="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <h3 class="font-bold text-xs sm:text-sm text-[#3A2010]">Rekapitulasi Bulanan Seluruh Pegawai</h3>
+          <p class="text-[10px] sm:text-[11px] text-gray-500">Acuan hitungan upah/gaji crew kedai</p>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
+
+        <div class="sm:hidden px-3 pt-2 text-[11px] text-amber-900 bg-amber-50/70 flex items-center gap-1.5 font-medium border-b border-amber-100 pb-1.5">
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-amber-700 flex-shrink-0"></i>
+          <span>Geser ke samping untuk melihat total hadir & durasi &rarr;</span>
+        </div>
+
+        <div class="overflow-x-auto w-full">
+          <table class="w-full text-left text-xs min-w-[550px]">
             <thead class="bg-amber-50/70 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th class="p-3">ID Pegawai</th>
-                <th class="p-3">Nama Pegawai</th>
-                <th class="p-3">Jabatan</th>
-                <th class="p-3 text-center">Total Hari Hadir</th>
-                <th class="p-3 text-right">Total Menit Kerja</th>
-                <th class="p-3 text-right">Total Jam Kerja</th>
+                <th class="p-2.5 sm:p-3">ID</th>
+                <th class="p-2.5 sm:p-3">Nama Pegawai</th>
+                <th class="p-2.5 sm:p-3">Jabatan</th>
+                <th class="p-2.5 sm:p-3 text-center">Hari Hadir</th>
+                <th class="p-2.5 sm:p-3 text-right">Total Menit</th>
+                <th class="p-2.5 sm:p-3 text-right">Total Jam Kerja</th>
               </tr>
             </thead>
-            <tbody id="monthlyTableBody" class="divide-y divide-gray-100">
+            <tbody id="monthlyTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
                 <td colspan="6" class="p-6 text-center text-gray-400">Pilih bulan untuk melihat rekapitulasi.</td>
               </tr>
@@ -265,32 +298,37 @@
     </section>
 
     <!-- ==================== TAB 4: KELOLA PEGAWAI ==================== -->
-    <section id="tab-employees" class="tab-content hidden space-y-4">
-      <div class="flex items-center justify-between">
+    <section id="tab-employees" class="tab-content hidden space-y-3 sm:space-y-4">
+      <div class="coffee-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-base font-bold text-[#3A2010]">Manajemen Pegawai & Crew</h2>
-          <p class="text-xs text-gray-500">Tambah pegawai baru, atur PIN login sementara, atau nonaktifkan akun.</p>
+          <h2 class="text-xs sm:text-sm font-bold text-[#3A2010]">Manajemen Pegawai & Crew</h2>
+          <p class="text-[11px] text-gray-500">Tambah pegawai baru, atur PIN login, atau nonaktifkan akun crew.</p>
         </div>
-        <button id="btnOpenAddEmpModal" class="btn-coffee px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow font-bold">
+        <button id="btnOpenAddEmpModal" class="btn-coffee px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-2 shadow font-bold">
           <i data-lucide="user-plus" class="w-4 h-4"></i>
           <span>Tambah Pegawai Baru</span>
         </button>
       </div>
 
       <div class="coffee-card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
+        <div class="sm:hidden px-3 pt-2 text-[11px] text-amber-900 bg-amber-50/70 flex items-center gap-1.5 font-medium border-b border-amber-100 pb-1.5">
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-amber-700 flex-shrink-0"></i>
+          <span>Geser ke samping untuk melihat PIN & aksi edit &rarr;</span>
+        </div>
+
+        <div class="overflow-x-auto w-full">
+          <table class="w-full text-left text-xs min-w-[550px]">
             <thead class="bg-amber-50/70 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th class="p-3">ID Pegawai</th>
-                <th class="p-3">Nama Lengkap</th>
-                <th class="p-3">Jabatan</th>
-                <th class="p-3">PIN / Password</th>
-                <th class="p-3">Status</th>
-                <th class="p-3 text-center">Aksi</th>
+                <th class="p-2.5 sm:p-3">ID</th>
+                <th class="p-2.5 sm:p-3">Nama Lengkap</th>
+                <th class="p-2.5 sm:p-3">Jabatan</th>
+                <th class="p-2.5 sm:p-3">PIN / Password</th>
+                <th class="p-2.5 sm:p-3">Status</th>
+                <th class="p-2.5 sm:p-3 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody id="employeesTableBody" class="divide-y divide-gray-100">
+            <tbody id="employeesTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
                 <td colspan="6" class="p-6 text-center text-gray-400">Memuat daftar pegawai...</td>
               </tr>
@@ -301,54 +339,54 @@
     </section>
 
     <!-- ==================== TAB 5: PENGATURAN KEDAI & GPS ==================== -->
-    <section id="tab-settings" class="tab-content hidden space-y-4">
-      <div class="coffee-card p-6 max-w-2xl space-y-5">
+    <section id="tab-settings" class="tab-content hidden space-y-3 sm:space-y-4">
+      <div class="coffee-card p-4 sm:p-6 max-w-2xl space-y-4 sm:space-y-5">
         <div>
-          <h2 class="text-base font-bold text-[#3A2010]">Pengaturan Lokasi Kedai & Validasi GPS</h2>
-          <p class="text-xs text-gray-500">Atur titik GPS kedai agar pegawai hanya bisa absensi saat berada di lokasi kedai.</p>
+          <h2 class="text-sm sm:text-base font-bold text-[#3A2010]">Pengaturan Lokasi Kedai & Validasi GPS</h2>
+          <p class="text-xs text-gray-500">Atur titik GPS kedai agar pegawai hanya bisa absensi saat berada di area kedai.</p>
         </div>
 
-        <form id="settingsForm" class="space-y-4">
+        <form id="settingsForm" class="space-y-3.5 text-xs">
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Kedai Kopi</label>
+            <label class="block font-semibold text-gray-700 mb-1">Nama Kedai Kopi</label>
             <input type="text" id="setShopName" required
               class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-gray-700 mb-1">Latitude Kedai</label>
+              <label class="block font-semibold text-gray-700 mb-1">Latitude Kedai</label>
               <input type="text" id="setLatitude" required
                 class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-gray-700 mb-1">Longitude Kedai</label>
+              <label class="block font-semibold text-gray-700 mb-1">Longitude Kedai</label>
               <input type="text" id="setLongitude" required
                 class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
             </div>
           </div>
 
           <!-- Tombol Ambil Lokasi Otomatis -->
-          <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="p-3 bg-amber-50/80 rounded-xl border border-amber-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <div>
-              <p class="text-xs font-bold text-amber-900">📍 Sedang Berada di Kedai Sekarang?</p>
-              <p class="text-[11px] text-amber-700">Klik tombol ini untuk mengisi Latitude & Longitude secara otomatis dari posisi Anda saat ini.</p>
+              <p class="text-xs font-bold text-amber-900 flex items-center gap-1">📍 Sedang Berada di Kedai Sekarang?</p>
+              <p class="text-[11px] text-amber-700 mt-0.5">Isi koordinat GPS otomatis berdasarkan lokasi perangkat Anda saat ini.</p>
             </div>
-            <button type="button" id="btnDetectCurrentCoords" class="btn-coffee px-3 py-2 text-xs rounded-lg whitespace-nowrap flex items-center gap-1 shadow font-semibold">
+            <button type="button" id="btnDetectCurrentCoords" class="btn-coffee px-3 py-2 text-xs rounded-xl whitespace-nowrap flex items-center justify-center gap-1 shadow-sm font-semibold flex-shrink-0">
               <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-              <span>Gunakan Lokasi Saya Saat Ini</span>
+              <span>Gunakan Lokasi Saat Ini</span>
             </button>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-gray-700 mb-1">Radius Toleransi Kedai (Meter)</label>
+              <label class="block font-semibold text-gray-700 mb-1">Radius Toleransi Kedai (Meter)</label>
               <input type="number" id="setRadius" min="10" max="500" required
                 class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
-              <p class="text-[10px] text-gray-400 mt-1">Disarankan: 30 - 50 meter (toleransi akurasi GPS HP)</p>
+              <p class="text-[10px] text-gray-400 mt-0.5">Rekomendasi: 25 - 50 meter</p>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-gray-700 mb-1">Validasi GPS Aktif?</label>
+              <label class="block font-semibold text-gray-700 mb-1">Validasi GPS Aktif?</label>
               <select id="setGpsEnforced" class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-semibold">
                 <option value="1">Aktif (Wajib di Area Kedai)</option>
                 <option value="0">Nonaktif (Bebas / Mode Uji Coba)</option>
@@ -357,12 +395,12 @@
           </div>
 
           <div class="pt-3 border-t border-gray-100">
-            <label class="block text-xs font-semibold text-gray-700 mb-1">PIN Master Owner (Untuk Login Owner)</label>
+            <label class="block font-semibold text-gray-700 mb-1">PIN Master Owner (Untuk Login Owner)</label>
             <input type="password" id="setOwnerPin" required
               class="w-full sm:w-1/2 px-3 py-2 text-xs font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
           </div>
 
-          <button type="submit" class="btn-coffee px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow">
+          <button type="submit" class="w-full sm:w-auto btn-coffee px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow">
             <i data-lucide="save" class="w-4 h-4"></i>
             <span>Simpan Perubahan Pengaturan</span>
           </button>
@@ -374,10 +412,10 @@
 
   <!-- Modal Tambah / Edit Pegawai -->
   <div id="empModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
-    <div class="coffee-card p-6 max-w-md w-full space-y-4 shadow-2xl">
+    <div class="coffee-card p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-100 pb-2">
         <h3 id="empModalTitle" class="font-bold text-sm text-[#3A2010]">Tambah Pegawai Baru</h3>
-        <button id="btnCloseEmpModal" class="text-gray-400 hover:text-gray-600">
+        <button id="btnCloseEmpModal" class="text-gray-400 hover:text-gray-600 p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -386,17 +424,17 @@
         <input type="hidden" id="empIdInputHidden">
         <div>
           <label class="block font-semibold text-gray-700 mb-1">ID Pegawai (Unik)</label>
-          <input type="text" id="empIdCode" required placeholder="Contoh: BRS-02"
-            class="w-full px-3 py-2 uppercase rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-mono">
+          <input type="text" id="empIdCode" required placeholder="Contoh: CKBS06"
+            class="w-full px-3 py-2 uppercase rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-mono">
         </div>
         <div>
           <label class="block font-semibold text-gray-700 mb-1">Nama Lengkap</label>
           <input type="text" id="empName" required placeholder="Nama Crew"
-            class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
+            class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
         </div>
         <div>
           <label class="block font-semibold text-gray-700 mb-1">Jabatan / Role</label>
-          <select id="empRole" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-medium">
+          <select id="empRole" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-medium">
             <option value="Barista">Barista</option>
             <option value="Kasir">Kasir</option>
             <option value="Kitchen / Cook">Kitchen / Cook</option>
@@ -408,13 +446,13 @@
         <div>
           <label class="block font-semibold text-gray-700 mb-1">PIN / Password Sementara</label>
           <input type="text" id="empPin" required placeholder="4 digit angka, misal: 1234"
-            class="w-full px-3 py-2 font-mono rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
-          <p class="text-[10px] text-gray-400 mt-1">PIN ini yang akan dimasukkan pegawai saat scan barcode untuk check-in.</p>
+            class="w-full px-3 py-2 font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
+          <p class="text-[10px] text-gray-400 mt-1">PIN ini yang akan dimasukkan pegawai saat login absen.</p>
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
-          <button type="button" id="btnCancelEmpModal" class="px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">Batal</button>
-          <button type="submit" class="btn-coffee px-4 py-2 rounded-lg font-bold flex items-center gap-1 shadow">
+          <button type="button" id="btnCancelEmpModal" class="px-3.5 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium">Batal</button>
+          <button type="submit" class="btn-coffee px-4 py-2 rounded-xl font-bold flex items-center gap-1 shadow">
             <i data-lucide="check" class="w-3.5 h-3.5"></i>
             <span>Simpan Data</span>
           </button>
@@ -425,34 +463,40 @@
 
   <!-- Modal QR Code Buka di HP -->
   <div id="mobileOwnerQrModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
-    <div class="coffee-card p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+    <div class="coffee-card p-5 sm:p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
       <div class="flex items-center justify-between border-b border-gray-100 pb-2">
         <h3 class="font-bold text-sm text-[#3A2010]">Buka Dashboard Owner di HP</h3>
-        <button id="btnCloseMobileOwnerQrModal" class="text-gray-400 hover:text-gray-600">
+        <button id="btnCloseMobileOwnerQrModal" class="text-gray-400 hover:text-gray-600 p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <p class="text-xs text-gray-600">
-        Arahkan kamera HP Anda ke barcode di bawah ini untuk langsung membuka Dashboard Owner di HP:
+      <p class="text-xs text-gray-600 leading-relaxed">
+        Scan barcode berikut pakai kamera HP untuk langsung membuka Dashboard Owner di HP Anda:
       </p>
 
       <div class="p-3 bg-white border-2 border-gray-900 rounded-2xl shadow-inner inline-block mx-auto">
         <div id="ownerMobileQrCanvas"></div>
       </div>
 
-      <div class="p-2 bg-amber-50 rounded-lg text-[11px] font-mono text-amber-950 break-all" id="ownerMobileQrUrlText">
+      <div class="p-2.5 bg-amber-50 rounded-xl text-[11px] font-mono text-amber-950 break-all border border-amber-200" id="ownerMobileQrUrlText">
         Memuat tautan online...
       </div>
 
-      <button id="btnDoneMobileOwnerQr" class="w-full btn-coffee py-2.5 rounded-xl text-xs font-bold shadow">
-        Tutup
-      </button>
+      <div class="space-y-2">
+        <button id="btnCopyOwnerUrl" type="button" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition border border-amber-300">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Salin Link Dashboard HP</span>
+        </button>
+        <button id="btnDoneMobileOwnerQr" class="w-full btn-coffee py-2 rounded-xl text-xs font-bold shadow">
+          Tutup
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Toast Notifikasi -->
-  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl shadow-2xl text-xs font-semibold hidden z-50 transition-all text-center">
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl shadow-2xl text-xs font-semibold hidden z-50 transition-all text-center max-w-[90%]">
   </div>
 
   <script src="/js/owner.js"></script>
