@@ -27,6 +27,16 @@ const MIME_TYPES = {
 // Helper parsing JSON body
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
+    if (req.body && typeof req.body === 'object') {
+      return resolve(req.body);
+    }
+    if (req.body && typeof req.body === 'string') {
+      try {
+        return resolve(JSON.parse(req.body));
+      } catch (err) {
+        return resolve({});
+      }
+    }
     let body = '';
     req.on('data', chunk => {
       body += chunk.toString();
@@ -66,8 +76,8 @@ function isOwnerAuthorized(req) {
   return pinHeader && pinHeader === settings.owner_pin;
 }
 
-// Server HTTP
-const server = http.createServer(async (req, res) => {
+// Request Handler Utama
+async function handleRequest(req, res) {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
   const method = req.method;
@@ -427,7 +437,7 @@ const server = http.createServer(async (req, res) => {
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
   });
-});
+}
 
 // Mendapatkan Alamat IP Komputer di Jaringan WiFi Lokal
 function getLocalIpAddresses() {
@@ -444,30 +454,36 @@ function getLocalIpAddresses() {
   return ips;
 }
 
-server.listen(PORT, '0.0.0.0', () => {
-  const ips = getLocalIpAddresses();
-  console.log('====================================================');
-  console.log('         KAPEBOONSEEN - SISTEM ABSENSI CREW         ');
-  console.log('====================================================');
-  console.log(`Server berhasil berjalan!`);
-  console.log(`- Akses Lokal di Komputer Ini : http://localhost:${PORT}`);
-  if (ips.length > 0) {
-    console.log(`- Akses dari HP / WiFi Kedai : http://${ips[0]}:${PORT}`);
-  }
-  console.log(`- Halaman Owner / Pemilik    : http://localhost:${PORT}/owner.html`);
-  console.log(`- Halaman Cetak Barcode Kedai: http://localhost:${PORT}/print-qr.html`);
-  console.log('====================================================');
+const server = http.createServer(handleRequest);
 
-  // Jalankan Cloudflare Tunnel gratis untuk akses HP (HTTPS + GPS)
-  tunnel.startTunnel(PORT);
-});
+if (require.main === module) {
+  server.listen(PORT, '0.0.0.0', () => {
+    const ips = getLocalIpAddresses();
+    console.log('====================================================');
+    console.log('         KAPEBOONSEEN - SISTEM ABSENSI CREW         ');
+    console.log('====================================================');
+    console.log(`Server berhasil berjalan!`);
+    console.log(`- Akses Lokal di Komputer Ini : http://localhost:${PORT}`);
+    if (ips.length > 0) {
+      console.log(`- Akses dari HP / WiFi Kedai : http://${ips[0]}:${PORT}`);
+    }
+    console.log(`- Halaman Owner / Pemilik    : http://localhost:${PORT}/owner.html`);
+    console.log(`- Halaman Cetak Barcode Kedai: http://localhost:${PORT}/print-qr.html`);
+    console.log('====================================================');
 
-process.on('SIGINT', () => {
-  tunnel.stopTunnel();
-  process.exit(0);
-});
+    // Jalankan Cloudflare Tunnel gratis untuk akses HP (HTTPS + GPS)
+    tunnel.startTunnel(PORT);
+  });
 
-process.on('SIGTERM', () => {
-  tunnel.stopTunnel();
-  process.exit(0);
-});
+  process.on('SIGINT', () => {
+    tunnel.stopTunnel();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    tunnel.stopTunnel();
+    process.exit(0);
+  });
+}
+
+module.exports = handleRequest;

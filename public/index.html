@@ -27,11 +27,17 @@
           </p>
         </div>
       </div>
-      <div id="userBadgeArea" class="hidden">
-        <button id="btnLogout" class="text-xs bg-black/20 hover:bg-black/30 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1">
-          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-          <span>Keluar</span>
-        </button>
+      <div class="flex items-center gap-2">
+        <a href="/owner.html" class="bg-amber-900/80 hover:bg-amber-800 text-amber-100 text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold border border-amber-500/30 shadow transition">
+          <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-300"></i>
+          <span>Owner</span>
+        </a>
+        <div id="userBadgeArea" class="hidden">
+          <button id="btnLogout" class="text-xs bg-black/20 hover:bg-black/30 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Keluar</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -78,10 +84,12 @@
         </button>
       </form>
 
-      <div class="pt-3 border-t border-gray-100 text-center">
-        <p class="text-[11px] text-gray-500">
-          Belum punya PIN atau lupa? Tanyakan ke Owner kedai.
-        </p>
+      <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+        <span class="text-[11px] text-gray-500">Khusus Pemilik:</span>
+        <a href="/owner.html" class="text-[#8B5A2B] hover:text-[#5E391C] font-bold flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 shadow-sm transition">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-800"></i>
+          <span>Buka Dashboard Owner &rarr;</span>
+        </a>
       </div>
     </section>
 

@@ -14,7 +14,7 @@
     "gps"
   ],
   "engines": {
-    "node": ">=22.5.0"
+    "node": "22.x"
   },
   "author": "KAPEBOONSEEN",
   "license": "ISC"

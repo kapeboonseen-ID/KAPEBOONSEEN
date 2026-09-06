@@ -2,9 +2,22 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('node:path');
 const fs = require('node:fs');
 
-// Gunakan folder .data jika di Glitch / cloud hosting agar data permanen
-const dataDir = fs.existsSync(path.join(__dirname, '.data')) ? path.join(__dirname, '.data') : __dirname;
-const DB_PATH = path.join(dataDir, 'absensi.db');
+// Tentukan letak file database: di Vercel/Lambda gunakan /tmp, di lokal gunakan __dirname/.data
+let DB_PATH;
+if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  DB_PATH = '/tmp/absensi.db';
+  const seedDb = path.join(__dirname, 'absensi.db');
+  if (!fs.existsSync(DB_PATH) && fs.existsSync(seedDb)) {
+    try {
+      fs.copyFileSync(seedDb, DB_PATH);
+    } catch (e) {
+      console.error('Gagal copy seed absensi.db ke /tmp:', e);
+    }
+  }
+} else {
+  const dataDir = fs.existsSync(path.join(__dirname, '.data')) ? path.join(__dirname, '.data') : __dirname;
+  DB_PATH = path.join(dataDir, 'absensi.db');
+}
 const db = new DatabaseSync(DB_PATH);
 
 // Inisialisasi Tabel
@@ -52,10 +65,10 @@ function initDatabase() {
   // Set default settings jika belum ada
   const defaultSettings = [
     { key: 'shop_name', value: 'KAPEBOONSEEN' },
-    { key: 'latitude', value: '-6.2088' },
-    { key: 'longitude', value: '106.8456' },
-    { key: 'radius_meters', value: '50' },
-    { key: 'owner_pin', value: '123456' },
+    { key: 'latitude', value: '-6.882377731222678' },
+    { key: 'longitude', value: '107.53165355029745' },
+    { key: 'radius_meters', value: '25' },
+    { key: 'owner_pin', value: '200295' },
     { key: 'gps_enforced', value: '1' }
   ];
 
@@ -69,7 +82,7 @@ function initDatabase() {
     }
   }
 
-  // Tambah pegawai sampel jika tabel masih kosong
+  // Tambah pegawai awal jika tabel masih kosong
   const empCount = db.prepare('SELECT COUNT(*) as count FROM employees').get();
   if (empCount && empCount.count === 0) {
     const insertEmp = db.prepare(`
@@ -77,9 +90,11 @@ function initDatabase() {
       VALUES (?, ?, ?, ?, 1, ?)
     `);
     const now = new Date().toISOString();
-    insertEmp.run('BRS-01', 'Rian', '1111', 'Barista', now);
-    insertEmp.run('KSR-01', 'Siti', '2222', 'Kasir', now);
-    insertEmp.run('KIT-01', 'Budi', '3333', 'Kitchen', now);
+    insertEmp.run('CKBS01', 'Raska Novanpurian', '111111', 'Barista', now);
+    insertEmp.run('CKBS02', 'Shiddiq Hibatullah M', '222222', 'Head Bar', now);
+    insertEmp.run('CKBS03', 'Salsa Nabila', '333333', 'Crew', now);
+    insertEmp.run('CKBS04', 'Luthfia Putri Hidayat', '444444', 'Crew', now);
+    insertEmp.run('CKBS05', 'Riska Perilia', '555555', 'Crew', now);
   }
 }
 
