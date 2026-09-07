@@ -167,6 +167,17 @@ function saveJsonStore() {
   } catch (e) {}
 }
 
+let dbReadyPromise = null;
+function ensureDatabaseReady() {
+  if (!dbReadyPromise) {
+    dbReadyPromise = initDatabase().catch(err => {
+      dbReadyPromise = null;
+      console.error('[DB] Gagal inisialisasi DB:', err.message);
+    });
+  }
+  return dbReadyPromise;
+}
+
 // Inisialisasi Tabel & Skema
 async function initDatabase() {
   // 1. Jika mode Turso Cloud aktif
@@ -248,21 +259,28 @@ async function initDatabase() {
 
       // Seed default employees jika kosong
       const empCount = await tursoExecute('SELECT COUNT(*) as count FROM employees');
-      if (empCount.rows && empCount.rows[0] && Number(empCount.rows[0].count) === 0) {
+      let totalEmps = 0;
+      if (empCount && empCount.rows && empCount.rows.length > 0) {
+        const row0 = empCount.rows[0];
+        const val = row0.count !== undefined ? row0.count : Object.values(row0)[0];
+        totalEmps = Number(val) || 0;
+      }
+      if (totalEmps === 0) {
         const now = new Date().toISOString();
         const initialEmps = [
           ['CKBS01', 'Raska Novanpurian', '111111', 'Barista', 1, 1, now],
           ['CKBS02', 'Shiddiq Hibatullah M', '222222', 'Head Bar', 1, 1, now],
-          ['CKBS03', 'Salsa Nabila', '333333', 'Crew', 0, 0, now],
-          ['CKBS04', 'Luthfia Putri Hidayat', '444444', 'Crew', 0, 0, now],
-          ['CKBS05', 'Riska Perilia', '555555', 'Crew', 0, 0, now],
-          ['TEST01', 'KARYAWAN TEST', '1234', 'Barista', 1, 1, now]
+          ['CKBS03', 'Salsa Nabila', '333333', 'Crew', 1, 0, now],
+          ['CKBS04', 'Luthfia Putri Hidayat', '444444', 'Crew', 1, 0, now],
+          ['CKBS05', 'Riska Perilia', '555555', 'Crew', 1, 0, now]
         ];
         for (const emp of initialEmps) {
-          await tursoExecute(`
-            INSERT INTO employees (employee_id, name, pin, role, is_active, can_access_reports, created_at)
-            VALUES (?, ?, ?, ?, 1, ?, ?)
-          `, emp);
+          try {
+            await tursoExecute(`
+              INSERT INTO employees (employee_id, name, pin, role, is_active, can_access_reports, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, emp);
+          } catch (e) {}
         }
       }
       return;
@@ -514,9 +532,31 @@ async function getAllEmployees(includeInactive = false) {
       const sql = includeInactive
         ? 'SELECT id, employee_id, name, pin, role, is_active, can_access_reports, created_at FROM employees ORDER BY employee_id ASC'
         : 'SELECT id, employee_id, name, pin, role, is_active, can_access_reports, created_at FROM employees WHERE is_active = 1 ORDER BY employee_id ASC';
-      const res = await tursoExecute(sql);
-      return res.rows;
-    } catch (e) {}
+      let res = await tursoExecute(sql);
+      if (!res || !res.rows || res.rows.length === 0) {
+        // Auto-seed data awal jika Turso masih kosong
+        const now = new Date().toISOString();
+        const initialEmps = [
+          ['CKBS01', 'Raska Novanpurian', '111111', 'Barista', 1, 1, now],
+          ['CKBS02', 'Shiddiq Hibatullah M', '222222', 'Head Bar', 1, 1, now],
+          ['CKBS03', 'Salsa Nabila', '333333', 'Crew', 1, 0, now],
+          ['CKBS04', 'Luthfia Putri Hidayat', '444444', 'Crew', 1, 0, now],
+          ['CKBS05', 'Riska Perilia', '555555', 'Crew', 1, 0, now]
+        ];
+        for (const emp of initialEmps) {
+          try {
+            await tursoExecute(`
+              INSERT INTO employees (employee_id, name, pin, role, is_active, can_access_reports, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, emp);
+          } catch (e) {}
+        }
+        res = await tursoExecute(sql);
+      }
+      return res && res.rows ? res.rows : [];
+    } catch (e) {
+      console.error('[DB] Gagal ambil pegawai Turso:', e.message);
+    }
   }
 
   if (db) {
@@ -579,50 +619,102 @@ async function updateEmployee(id, employeeId, name, pin, role, isActive, canAcce
   const cleanId = employeeId.trim().toUpperCase();
   const activeInt = isActive ? 1 : 0;
   const reportPerm = canAccessReports ? 1 : 0;
+  const idNum = Number(id);
 
   if (TURSO_URL && TURSO_TOKEN) {
+    // 1. Cek apakah ID baru sudah dipakai oleh pegawai lain
+    const checkDup = await tursoExecute('SELECT id FROM employees WHERE UPPER(employee_id) = ? AND id != ?', [cleanId, idNum]);
+    if (checkDup && checkDup.rows && checkDup.rows.length > 0) {
+      throw new Error(`ID Pegawai "${cleanId}" sudah digunakan oleh pegawai lain!`);
+    }
+
+    // 2. Ambil ID lama pegawai untuk sinkronisasi data absensi
+    const oldEmp = await tursoExecute('SELECT employee_id FROM employees WHERE id = ?', [idNum]);
+    const oldEmpId = (oldEmp && oldEmp.rows && oldEmp.rows[0]) ? oldEmp.rows[0].employee_id : null;
+
     if (pin && pin.trim().length > 0) {
-      return tursoExecute(`
+      await tursoExecute(`
         UPDATE employees 
         SET employee_id = ?, name = ?, pin = ?, role = ?, is_active = ?, can_access_reports = ?
         WHERE id = ?
-      `, [cleanId, name.trim(), pin.trim(), (role || 'Crew').trim(), activeInt, reportPerm, id]);
+      `, [cleanId, name.trim(), pin.trim(), (role || 'Crew').trim(), activeInt, reportPerm, idNum]);
     } else {
-      return tursoExecute(`
+      await tursoExecute(`
         UPDATE employees 
         SET employee_id = ?, name = ?, role = ?, is_active = ?, can_access_reports = ?
         WHERE id = ?
-      `, [cleanId, name.trim(), (role || 'Crew').trim(), activeInt, reportPerm, id]);
+      `, [cleanId, name.trim(), (role || 'Crew').trim(), activeInt, reportPerm, idNum]);
     }
+
+    // 3. Jika ID diubah, perbarui seluruh riwayat absensi pegawai ini ke ID baru
+    if (oldEmpId && oldEmpId.toUpperCase() !== cleanId) {
+      await tursoExecute('UPDATE attendances SET employee_id = ? WHERE UPPER(employee_id) = ?', [cleanId, oldEmpId.toUpperCase()]);
+    }
+
+    return { changes: 1 };
   }
 
   if (db) {
+    // 1. Cek duplikasi ID
+    const checkDup = db.prepare('SELECT id FROM employees WHERE UPPER(employee_id) = ? AND id != ?').get(cleanId, idNum);
+    if (checkDup) {
+      throw new Error(`ID Pegawai "${cleanId}" sudah digunakan oleh pegawai lain!`);
+    }
+
+    // 2. Ambil ID lama
+    const oldEmp = db.prepare('SELECT employee_id FROM employees WHERE id = ?').get(idNum);
+    const oldEmpId = oldEmp ? oldEmp.employee_id : null;
+
     if (pin && pin.trim().length > 0) {
       const stmt = db.prepare(`
         UPDATE employees 
         SET employee_id = ?, name = ?, pin = ?, role = ?, is_active = ?, can_access_reports = ?
         WHERE id = ?
       `);
-      return stmt.run(cleanId, name.trim(), pin.trim(), role.trim(), activeInt, reportPerm, id);
+      stmt.run(cleanId, name.trim(), pin.trim(), (role || 'Crew').trim(), activeInt, reportPerm, idNum);
     } else {
       const stmt = db.prepare(`
         UPDATE employees 
         SET employee_id = ?, name = ?, role = ?, is_active = ?, can_access_reports = ?
         WHERE id = ?
       `);
-      return stmt.run(cleanId, name.trim(), role.trim(), activeInt, reportPerm, id);
+      stmt.run(cleanId, name.trim(), (role || 'Crew').trim(), activeInt, reportPerm, idNum);
     }
+
+    // 3. Sinkronkan riwayat absensi jika ID berubah
+    if (oldEmpId && oldEmpId.toUpperCase() !== cleanId) {
+      const stmtAtt = db.prepare('UPDATE attendances SET employee_id = ? WHERE UPPER(employee_id) = ?');
+      stmtAtt.run(cleanId, oldEmpId.toUpperCase());
+    }
+
+    return { changes: 1 };
   }
 
   const store = loadJsonStore();
-  const emp = store.employees.find(e => e.id === Number(id));
+  const empDup = store.employees.find(e => e.employee_id.toUpperCase() === cleanId && e.id !== idNum);
+  if (empDup) {
+    throw new Error(`ID Pegawai "${cleanId}" sudah digunakan oleh pegawai lain!`);
+  }
+
+  const emp = store.employees.find(e => e.id === idNum);
   if (emp) {
+    const oldEmpId = emp.employee_id;
     emp.employee_id = cleanId;
     emp.name = name.trim();
     if (pin && pin.trim().length > 0) emp.pin = pin.trim();
-    emp.role = role.trim();
+    emp.role = (role || 'Crew').trim();
     emp.is_active = activeInt;
     emp.can_access_reports = reportPerm;
+
+    // Sinkronkan riwayat absensi jika ID berubah
+    if (oldEmpId && oldEmpId.toUpperCase() !== cleanId) {
+      store.attendances.forEach(a => {
+        if (a.employee_id.toUpperCase() === oldEmpId.toUpperCase()) {
+          a.employee_id = cleanId;
+        }
+      });
+    }
+
     saveJsonStore();
   }
   return { changes: 1 };
@@ -1583,6 +1675,7 @@ function formatMinutesToHours(totalMinutes) {
 
 module.exports = {
   initDatabase,
+  ensureDatabaseReady,
   calculateDistanceMeters,
   getDatabaseStatus,
   getAllSettings,

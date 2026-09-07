@@ -969,7 +969,7 @@ window.openEditEmployeeModal = function(id, code, nameEncoded, pin, role, isActi
   document.getElementById('empModalTitle').textContent = 'Edit Data Pegawai';
   document.getElementById('empIdInputHidden').value = id;
   document.getElementById('empIdCode').value = code;
-  document.getElementById('empIdCode').readOnly = true;
+  document.getElementById('empIdCode').readOnly = false;
   document.getElementById('empName').value = decodeURIComponent(nameEncoded);
   document.getElementById('empPin').value = pin;
   document.getElementById('empRole').value = role;
@@ -979,7 +979,7 @@ window.openEditEmployeeModal = function(id, code, nameEncoded, pin, role, isActi
 
 async function handleSaveEmployee(e) {
   e.preventDefault();
-  const id = document.getElementById('empIdInputHidden').value;
+  const idVal = document.getElementById('empIdInputHidden').value;
   const employee_id = document.getElementById('empIdCode').value.trim().toUpperCase();
   const name = document.getElementById('empName').value.trim();
   const pin = document.getElementById('empPin').value.trim();
@@ -991,18 +991,25 @@ async function handleSaveEmployee(e) {
     return;
   }
 
-  const url = id ? `/api/admin/employees/${id}` : '/api/admin/employees';
-  const method = id ? 'PUT' : 'POST';
+  const payload = {
+    id: idVal ? parseInt(idVal, 10) : undefined,
+    employee_id,
+    name,
+    pin,
+    role,
+    can_access_reports,
+    is_active: true
+  };
 
   try {
-    const res = await fetch(url, {
-      method,
+    const res = await fetch('/api/admin/employees', {
+      method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ employee_id, name, pin, role, can_access_reports, is_active: true })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.success) {
-      showToast(data.message || 'Data pegawai berhasil disimpan!', 'success');
+      showToast(data.message || 'Data pegawai dan hak akses berhasil disimpan!', 'success');
       document.getElementById('empModal').classList.add('hidden');
       loadEmployees();
     } else {
@@ -1016,9 +1023,10 @@ async function handleSaveEmployee(e) {
 window.handleDeleteEmployee = async function(id, code) {
   if (!confirm(`Yakin ingin menonaktifkan pegawai ${code}?`)) return;
   try {
-    const res = await fetch(`/api/admin/employees/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
+    const res = await fetch('/api/admin/employees', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ id: parseInt(id, 10), action: 'delete' })
     });
     const data = await res.json();
     if (data.success) {
@@ -1466,6 +1474,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Cek otentikasi awal saat halaman dibuka
   verifyOwnerAccess();
+
+  // Auto-refresh data harian & notifikasi secara realtime setiap 15 detik
+  setInterval(() => {
+    if (currentTab === 'tab-daily' && (ownerPin || (authEmpId && authEmpPin))) {
+      loadDailyRecap();
+      checkPendingCorrections();
+    }
+  }, 15000);
 
   if (window.lucide) lucide.createIcons();
 });

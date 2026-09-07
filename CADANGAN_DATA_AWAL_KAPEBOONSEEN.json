@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-09-07T12:00:00.000Z",
+  "settings": {
+    "shop_name": "KAPEBOONSEEN",
+    "latitude": "-6.882377731222678",
+    "longitude": "107.53165355029745",
+    "radius_meters": "25",
+    "owner_pin": "200295",
+    "gps_enforced": "1",
+    "shift_time_enabled": "1"
+  },
+  "employees": [
+    {
+      "id": 1,
+      "employee_id": "CKBS01",
+      "name": "Raska Novanpurian",
+      "pin": "111111",
+      "role": "Barista",
+      "is_active": 1,
+      "can_access_reports": 1,
+      "created_at": "2026-09-06T07:03:53.541Z"
+    },
+    {
+      "id": 2,
+      "employee_id": "CKBS02",
+      "name": "Shiddiq Hibatullah M",
+      "pin": "222222",
+      "role": "Head Bar",
+      "is_active": 1,
+      "can_access_reports": 1,
+      "created_at": "2026-09-06T07:03:53.541Z"
+    },
+    {
+      "id": 3,
+      "employee_id": "CKBS03",
+      "name": "Salsa Nabila",
+      "pin": "333333",
+      "role": "Crew",
+      "is_active": 1,
+      "can_access_reports": 0,
+      "created_at": "2026-09-06T07:03:53.541Z"
+    },
+    {
+      "id": 4,
+      "employee_id": "CKBS04",
+      "name": "Luthfia Putri Hidayat",
+      "pin": "444444",
+      "role": "Crew",
+      "is_active": 1,
+      "can_access_reports": 0,
+      "created_at": "2026-09-06T07:42:06.853Z"
+    },
+    {
+      "id": 5,
+      "employee_id": "CKBS05",
+      "name": "Riska Perilia",
+      "pin": "555555",
+      "role": "Crew",
+      "is_active": 1,
+      "can_access_reports": 0,
+      "created_at": "2026-09-06T07:43:18.313Z"
+    }
+  ],
+  "attendances": []
+}

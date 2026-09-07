@@ -145,6 +145,10 @@ async function handleRequest(req, res) {
   // ===================== API ROUTES =====================
   if (pathname.startsWith('/api/')) {
     try {
+      if (db.ensureDatabaseReady) {
+        await db.ensureDatabaseReady();
+      }
+
       // 0. Info Server & Tautan Barcode HP (WiFi / Cloudflare HTTPS / Cloud Vercel)
       if (pathname === '/api/server-info' && method === 'GET') {
         const ips = getLocalIpAddresses();
@@ -567,9 +571,39 @@ async function handleRequest(req, res) {
 
       if (pathname === '/api/admin/employees' && method === 'POST') {
         if (!(await isOwnerAuthorized(req))) {
-          return sendJson(res, 403, { success: false, message: 'Hanya Owner yang dapat menambahkan pegawai.' });
+          return sendJson(res, 403, { success: false, message: 'Hanya Owner yang dapat mengelola data pegawai.' });
         }
-        const { employee_id, name, pin, role, can_access_reports } = await parseJsonBody(req);
+        const body = await parseJsonBody(req);
+        const { id, employee_id, name, pin, role, is_active, can_access_reports, action } = body;
+
+        // Aksi Delete / Nonaktifkan Pegawai
+        if (action === 'delete' && id) {
+          await db.deleteEmployee(parseInt(id, 10));
+          return sendJson(res, 200, { success: true, message: 'Pegawai berhasil dinonaktifkan!' });
+        }
+
+        // Aksi Update Pegawai yang Sudah Ada
+        if (id) {
+          if (!employee_id || !name) {
+            return sendJson(res, 400, { success: false, message: 'ID Pegawai dan Nama wajib diisi!' });
+          }
+          try {
+            await db.updateEmployee(
+              parseInt(id, 10),
+              employee_id,
+              name,
+              pin || '',
+              role || 'Crew',
+              is_active !== false,
+              can_access_reports ? 1 : 0
+            );
+            return sendJson(res, 200, { success: true, message: 'Data pegawai dan ID berhasil diperbarui!' });
+          } catch (err) {
+            return sendJson(res, 400, { success: false, message: err.message });
+          }
+        }
+
+        // Aksi Tambah Pegawai Baru
         if (!employee_id || !name || !pin) {
           return sendJson(res, 400, { success: false, message: 'ID Pegawai, Nama, dan PIN wajib diisi!' });
         }
@@ -577,26 +611,34 @@ async function handleRequest(req, res) {
           await db.addEmployee(employee_id, name, pin, role || 'Crew', can_access_reports ? 1 : 0);
           return sendJson(res, 200, { success: true, message: 'Pegawai baru berhasil ditambahkan!' });
         } catch (err) {
-          return sendJson(res, 400, { success: false, message: 'ID Pegawai sudah terdaftar atau terjadi error: ' + err.message });
+          return sendJson(res, 400, { success: false, message: 'ID Pegawai sudah terdaftar: ' + err.message });
         }
       }
 
-      if (pathname.startsWith('/api/admin/employees/') && method === 'PUT') {
+      if ((pathname.startsWith('/api/admin/employees/') || pathname === '/api/admin/employees/update') && (method === 'PUT' || method === 'POST')) {
         if (!(await isOwnerAuthorized(req))) {
           return sendJson(res, 403, { success: false, message: 'Hanya Owner yang dapat mengubah data pegawai.' });
         }
-        const id = parseInt(pathname.split('/')[4], 10);
-        const { employee_id, name, pin, role, is_active, can_access_reports } = await parseJsonBody(req);
-        await db.updateEmployee(id, employee_id, name, pin, role, is_active !== false, can_access_reports ? 1 : 0);
-        return sendJson(res, 200, { success: true, message: 'Data pegawai berhasil diperbarui!' });
+        const body = await parseJsonBody(req);
+        const pathParts = pathname.split('/');
+        const id = body.id || parseInt(pathParts[4], 10);
+        const { employee_id, name, pin, role, is_active, can_access_reports } = body;
+        try {
+          await db.updateEmployee(parseInt(id, 10), employee_id, name, pin || '', role || 'Crew', is_active !== false, can_access_reports ? 1 : 0);
+          return sendJson(res, 200, { success: true, message: 'Data pegawai dan ID berhasil diperbarui!' });
+        } catch (err) {
+          return sendJson(res, 400, { success: false, message: err.message });
+        }
       }
 
-      if (pathname.startsWith('/api/admin/employees/') && method === 'DELETE') {
+      if ((pathname.startsWith('/api/admin/employees/') || pathname === '/api/admin/employees/delete') && (method === 'DELETE' || method === 'POST')) {
         if (!(await isOwnerAuthorized(req))) {
           return sendJson(res, 403, { success: false, message: 'Hanya Owner yang dapat menonaktifkan pegawai.' });
         }
-        const id = parseInt(pathname.split('/')[4], 10);
-        await db.deleteEmployee(id);
+        const body = await parseJsonBody(req);
+        const pathParts = pathname.split('/');
+        const id = body.id || parseInt(pathParts[4], 10);
+        await db.deleteEmployee(parseInt(id, 10));
         return sendJson(res, 200, { success: true, message: 'Pegawai berhasil dinonaktifkan!' });
       }
 
