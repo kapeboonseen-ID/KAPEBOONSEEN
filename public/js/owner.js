@@ -144,7 +144,7 @@ async function verifyOwnerAccess(isManualSubmit = false) {
       if (isManualSubmit) {
         const targetErr = (authRole === 'supervisor') ? errBoxSup : errBoxOwner;
         if (targetErr) {
-          targetErr.textContent = 'Gagal membaca respon server. Periksa koneksi internet Anda.';
+          targetErr.textContent = `Respon server tidak valid (Status HTTP ${res.status}). Silakan periksa koneksi atau muat ulang halaman.`;
           targetErr.classList.remove('hidden');
         }
       }
@@ -1577,8 +1577,13 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmit.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1"></span> Memverifikasi...';
       }
 
+      // Bersihkan sesi supervisor sebelumnya agar tidak konflik
       ownerPin = pin;
       authRole = 'owner';
+      authEmpId = '';
+      authEmpPin = '';
+      localStorage.removeItem('auth_emp_id');
+      localStorage.removeItem('auth_emp_pin');
       localStorage.setItem('owner_auth_pin', pin);
       localStorage.setItem('auth_role', 'owner');
 
@@ -1590,6 +1595,21 @@ document.addEventListener('DOMContentLoaded', () => {
           btnSubmit.innerHTML = '<i data-lucide="unlock" class="w-4 h-4"></i> <span>Buka Dashboard Owner</span>';
           if (window.lucide) lucide.createIcons();
         }
+      }
+    });
+  }
+
+  // Toggle Lihat/Sembunyikan PIN Master Owner
+  const btnTogglePin = document.getElementById('btnToggleOwnerPinVisibility');
+  const inputOwnerPin = document.getElementById('ownerPinInput');
+  const iconEye = document.getElementById('iconEyeOwnerPin');
+  if (btnTogglePin && inputOwnerPin) {
+    btnTogglePin.addEventListener('click', () => {
+      const isPassword = inputOwnerPin.type === 'password';
+      inputOwnerPin.type = isPassword ? 'text' : 'password';
+      if (iconEye) {
+        iconEye.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+        if (window.lucide) lucide.createIcons();
       }
     });
   }

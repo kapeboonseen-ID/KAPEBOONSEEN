@@ -121,7 +121,19 @@ async function getAuthorizedUser(req) {
 
 // Request Handler Utama
 async function handleRequest(req, res) {
-  const parsedUrl = url.parse(req.url || '/', true);
+  // Normalisasi URL untuk Vercel Serverless Function & Cloudflare Tunnel
+  let rawUrl = req.url || '/';
+  if (req.headers) {
+    if (req.headers['x-matched-path']) {
+      rawUrl = req.headers['x-matched-path'];
+    } else if (req.headers['x-vercel-matched-path']) {
+      rawUrl = req.headers['x-vercel-matched-path'];
+    } else if (req.headers['x-forwarded-uri']) {
+      rawUrl = req.headers['x-forwarded-uri'];
+    }
+  }
+
+  const parsedUrl = url.parse(rawUrl, true);
   let pathname = parsedUrl.pathname || '/';
   if (!pathname.startsWith('/api/') && pathname !== '/api') {
     if (pathname.startsWith('/admin/') || pathname.startsWith('/auth/') || 
@@ -129,6 +141,10 @@ async function handleRequest(req, res) {
         pathname === '/server-info') {
       pathname = '/api' + pathname;
     }
+  }
+  // Normalisasi trailing slash agar /api/admin/verify/ cocok dengan /api/admin/verify
+  if (pathname.length > 1 && pathname.endsWith('/')) {
+    pathname = pathname.replace(/\/+$/, '');
   }
   const method = req.method;
 
@@ -198,9 +214,15 @@ async function handleRequest(req, res) {
           return sendJson(res, 400, { success: false, message: 'ID dan PIN harus diisi!' });
         }
 
+        const cleanEmpId = String(employee_id).trim().toUpperCase();
+        const cleanPin = String(pin).trim();
         const settings = await db.getAllSettings();
-        // Cek jika login sebagai Owner
-        if (employee_id.trim().toUpperCase() === 'OWNER' && (pin.trim() === settings.owner_pin || pin.trim() === '200295')) {
+        const dbOwnerPin = settings.owner_pin ? String(settings.owner_pin).trim() : '';
+
+        // Cek jika login sebagai Owner (ID: OWNER, ADMIN, PEMILIK, atau PIN cocok dengan Master PIN)
+        const isOwnerKeyword = cleanEmpId === 'OWNER' || cleanEmpId === 'ADMIN' || cleanEmpId === 'PEMILIK';
+        const isMasterPin = cleanPin === dbOwnerPin || cleanPin === '200295';
+        if (isOwnerKeyword && isMasterPin) {
           return sendJson(res, 200, {
             success: true,
             role: 'owner',
@@ -455,11 +477,20 @@ async function handleRequest(req, res) {
         const body = await parseJsonBody(req);
         const { pin, employee_id } = body;
 
+        const cleanPin = pin ? String(pin).trim() : '';
+        const cleanEmpId = employee_id ? String(employee_id).trim().toUpperCase() : '';
+
+        const settings = await db.getAllSettings();
+        const dbOwnerPin = settings.owner_pin ? String(settings.owner_pin).trim() : '';
+        const isMasterPin = cleanPin === dbOwnerPin || cleanPin === '200295';
+
         // Opsi A: Login via PIN Owner Master
-        if (pin && !employee_id) {
-          const settings = await db.getAllSettings();
-          const enteredPin = String(pin).trim();
-          if (enteredPin === String(settings.owner_pin).trim() || enteredPin === '200295') {
+        // Jika ID kosong, bernilai 'OWNER'/'ADMIN'/'PEMILIK', atau jika PIN cocok dengan Master PIN
+        if (!cleanEmpId || cleanEmpId === 'OWNER' || cleanEmpId === 'ADMIN' || cleanEmpId === 'PEMILIK') {
+          if (!cleanPin) {
+            return sendJson(res, 400, { success: false, message: 'PIN Owner wajib diisi!' });
+          }
+          if (isMasterPin) {
             return sendJson(res, 200, {
               success: true,
               role: 'owner',
@@ -469,9 +500,18 @@ async function handleRequest(req, res) {
           return sendJson(res, 401, { success: false, message: 'PIN Owner salah! Silakan periksa kembali.' });
         }
 
+        // Fallback: Jika ID diisi tetapi PIN adalah PIN Master Owner, langsung berikan akses Owner!
+        if (isMasterPin) {
+          return sendJson(res, 200, {
+            success: true,
+            role: 'owner',
+            user: { name: 'Owner Kedai', role: 'Owner' }
+          });
+        }
+
         // Opsi B: Login via ID Pegawai + PIN Pribadi (Supervisor / Akses Laporan)
-        if (employee_id && pin) {
-          const emp = await db.findEmployeeWithReportAccess(employee_id, pin);
+        if (cleanEmpId && cleanPin) {
+          const emp = await db.findEmployeeWithReportAccess(cleanEmpId, cleanPin);
           if (emp) {
             return sendJson(res, 200, {
               success: true,
