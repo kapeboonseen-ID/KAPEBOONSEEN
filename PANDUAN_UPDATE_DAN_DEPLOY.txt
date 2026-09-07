@@ -1,0 +1,112 @@
+================================================================================
+             PANDUAN PEMBARUAN SISTEM ABSENSI KAPEBOONSEEN v2.2.0
+================================================================================
+
+Halo Owner KAPEBOONSEEN!
+Seluruh permintaan pembaruan Anda telah selesai dikembangkan, diuji secara menyeluruh,
+dan siap digunakan secara langsung.
+
+Berikut adalah rangkuman fitur baru dan panduan penggunaannya:
+
+--------------------------------------------------------------------------------
+1. KEAMANAN DATA REKAP & PENYIMPANAN PERMANEN
+--------------------------------------------------------------------------------
+- Data rekap absensi TIDAK AKAN HILANG atau terhapus otomatis oleh sistem meskipun
+  server mengalami restart atau pembaruan.
+- Hanya Owner yang memiliki wewenang mengosongkan riwayat absensi (dengan verifikasi
+  khusus mengetik kata "HAPUS" pada dashboard).
+- Disediakan tombol 1-Klik "Download Backup (.json)" dan "Pulihkan Data (.json)"
+  pada Dashboard Owner -> Tab "Lokasi, GPS & Data".
+- Mendukung Turso Cloud SQLite HTTP (100% Gratis Selamanya) untuk sinkronisasi cloud
+  lintas perangkat tanpa batas.
+
+--------------------------------------------------------------------------------
+2. EKSPOR EXCEL (.XLSX ASLI) & CSV + HAK AKSES KHUSUS (RBAC)
+--------------------------------------------------------------------------------
+- Seluruh rekap dapat diekspor langsung ke Microsoft Excel (.xlsx) dan Google Sheets:
+  a. Rekap Harian: Dilengkapi jam masuk, jam pulang, shift, status keterlambatan,
+     dan catatan audit koreksi check-out.
+  b. Rekap Mingguan: Dilengkapi total hari hadir, jumlah keterlambatan, dan total jam kerja.
+  c. Rekap Bulanan (Payroll): Dasar penggajian dengan kolom total hari hadir,
+     akumulasi keterlambatan, total menit & total jam kerja.
+  d. Master Log (.xlsx): Mengunduh seluruh riwayat absensi dari awal s/d sekarang.
+- Kontrol Hak Akses (Supervisor):
+  Owner dapat memberikan centang "Izinkan Akses Rekap & Laporan" pada data pegawai
+  tertentu (misal: Supervisor). Pegawai tersebut bisa login ke Dashboard menggunakan
+  ID & PIN pribadinya untuk melihat/ekspor laporan, sedangkan menu Kelola Pegawai,
+  GPS, dan Hapus Data tetap terkunci aman khusus Owner.
+
+--------------------------------------------------------------------------------
+3. DOWNLOAD POSTER BARCODE (JPEG RESOLUSI TINGGI & PDF SIAP CETAK A4)
+--------------------------------------------------------------------------------
+- Buka halaman: /print-qr.html (atau klik menu "Cetak Barcode" di dashboard).
+- Tersedia tombol:
+  1. "Download JPEG": Mengunduh gambar poster resolusi tinggi (skala 3x, tajam & jernih).
+  2. "Download PDF": Menghasilkan file PDF ukuran A4 yang pas di tengah kertas.
+  3. "Cetak Print": Langsung mencetak melalui printer meja kasir.
+
+--------------------------------------------------------------------------------
+4. ALUR PENGAJUAN KOREKSI CHECK-OUT (SALAH KLIK KEPULANGAN)
+--------------------------------------------------------------------------------
+- Setiap pegawai hanya bisa check in dan check out 1x per hari.
+- Jika pegawai tidak sengaja menekan tombol Check-Out sebelum jam kepulangan:
+  1. Di layar HP pegawai akan muncul tombol "Salah Klik Pulang? Ajukan Koreksi".
+  2. Pegawai mengisi alasan (misal: "Tidak sengaja tertekan saat di saku").
+  3. Sinyal notifikasi berkedip (Banner Oranye) langsung muncul di Dashboard Owner:
+     "🔔 Permintaan Koreksi Check-Out Masuk!"
+  4. Owner meninjau pengajuan dan menekan tombol "Setujui (Izinkan Check-Out Ulang)".
+  5. Status absensi pegawai otomatis kembali menjadi "Sedang Bertugas" (CHECKED_IN),
+     sehingga pegawai dapat bekerja normal dan melakukan Check-Out ulang nanti pada
+     jam kepulangan sebenarnya.
+  6. Total durasi kerja yang tercatat adalah dari jam Check-In pertama s/d Check-Out kedua.
+  7. Catatan audit bahwa telah terjadi koreksi check-out HANYA MUNCUL DI DASHBOARD OWNER
+     (Tampilan di HP pegawai tetap bersih dan profesional).
+
+--------------------------------------------------------------------------------
+5. PILIHAN SHIFT (MASUK & PULANG) & PERINGATAN TERLAMBAT (+30 MENIT)
+--------------------------------------------------------------------------------
+- Jam Masuk: 15:00, 18:00, dan 19:00.
+- Jam Pulang: 18:00, 19:00, dan 23:00.
+- Pegawai memilih jam shift terlebih dahulu sebelum menekan tombol absensi.
+- Jika waktu check-in melebihi 30 menit dari jam shift yang dipilih (misal: pilih 15:00
+  tetapi baru check-in jam 15:30 atau lebih):
+  -> Sistem menampilkan pop-up peringatan:
+     "Anda terlambat! Mohon untuk tidak diulangi."
+  -> Tercatat sebagai "Terlambat (+30m)" pada rekap harian.
+  -> Rekap mingguan dan bulanan mengakumulasi jumlah keterlambatan (misal: 1x, 2x).
+- FITUR MODULAR:
+  Jika suatu saat Anda ingin menghapus pilihan waktu, cukup buka:
+  Dashboard Owner -> Tab "Lokasi, GPS & Data" -> ubah "Pilihan Jam Shift" menjadi "Nonaktif".
+  Atau cukup beritahu asisten dengan kata: "HAPUS PILIHAN WAKTU".
+
+--------------------------------------------------------------------------------
+6. PENGUNCIAN TOMBOL CHECK-OUT SELAMA 105 MENIT (1 JAM 45 MENIT)
+--------------------------------------------------------------------------------
+- Setelah pegawai melakukan Check-In, tombol Check-In otomatis hilang.
+- Tombol Check-Out TERKUNCI (berwarna abu-abu, tidak bisa diklik) selama 105 menit
+  (1 jam 45 menit) terhitung sejak jam masuk.
+- Tampil banner hitung mundur langsung (countdown menit & detik) di layar HP pegawai.
+- Bersifat persisten: jika pegawai me-refresh browser, logout, atau ganti browser,
+  tombol tetap terkunci hingga genap 105 menit kerja.
+- Begitu waktu 105 menit terpenuhi, tombol otomatis terbuka dan siap ditekan pulang.
+
+================================================================================
+                    CARA UPDATE KE VERCEL & GITHUB
+================================================================================
+Langkah 1:
+Buka folder proyek Anda di komputer:
+d:\RASKA NOVANPURIAN\WORKSPACE\KAPEBOONSEEN\aplikasi\
+
+Langkah 2 (Jika menggunakan Git / GitHub):
+Jalankan perintah berikut di terminal / VS Code / Command Prompt:
+  git add .
+  git commit -m "Update fitur: shift time, 105min lock, checkout correction, excel export, and backup"
+  git push
+
+Vercel akan otomatis mendeteksi dan memperbarui aplikasi secara live dalam ~1 menit!
+
+Langkah 3 (Jika upload manual via file ZIP):
+Gunakan file "KAPEBOONSEEN-ONLINE.zip" yang telah kami sediakan di dalam folder aplikasi.
+
+Selesai! Aplikasi Anda kini semakin profesional, akurat, dan terlindungi penuh.
+================================================================================

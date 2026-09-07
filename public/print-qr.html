@@ -8,6 +8,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- QRCode.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- html2canvas untuk Konversi ke Gambar JPEG Resolusi Tinggi -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- jsPDF untuk Download Dokumen PDF Siap Cetak A4 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     @media print {
       body {
@@ -27,14 +31,35 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-4 sm:p-8 flex flex-col items-center justify-center font-sans">
 
-  <!-- Pengaturan Tautan QR Barcode (Khusus Pengaturan di Layar) -->
-  <div class="no-print max-w-md w-full mb-6 bg-white p-4 rounded-xl shadow-md space-y-3 border border-amber-200">
-    <div class="flex items-center justify-between">
-      <h3 class="font-bold text-xs text-amber-950 uppercase tracking-wider">Pengaturan Link Barcode</h3>
-      <button onclick="window.print()" class="bg-[#5E391C] hover:bg-[#4A2E18] text-white px-4 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition">
-        <span>🖨️ Cetak Poster (Print)</span>
+  <!-- Pengaturan & Tombol Aksi Download (Khusus Tampilan Layar) -->
+  <div class="no-print max-w-md w-full mb-6 bg-white p-4 rounded-2xl shadow-lg space-y-3 border border-amber-200">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+      <h3 class="font-bold text-xs text-amber-950 uppercase tracking-wider">Aksi Download & Cetak Barcode</h3>
+      <a href="/owner.html" class="text-[11px] font-semibold text-amber-800 hover:text-amber-950">&larr; Dashboard</a>
+    </div>
+
+    <!-- 3 Tombol Utama Sesuai Permintaan Owner -->
+    <div class="grid grid-cols-3 gap-2">
+      <button id="btnDownloadJpeg" type="button" class="bg-emerald-700 hover:bg-emerald-800 text-white py-2 px-2 rounded-xl text-xs font-bold shadow flex flex-col sm:flex-row items-center justify-center gap-1 transition">
+        <span>📸</span>
+        <span>Download JPEG</span>
+      </button>
+      <button id="btnDownloadPdf" type="button" class="bg-blue-700 hover:bg-blue-800 text-white py-2 px-2 rounded-xl text-xs font-bold shadow flex flex-col sm:flex-row items-center justify-center gap-1 transition">
+        <span>📄</span>
+        <span>Download PDF</span>
+      </button>
+      <button onclick="window.print()" class="bg-[#5E391C] hover:bg-[#4A2E18] text-white py-2 px-2 rounded-xl text-xs font-bold shadow flex flex-col sm:flex-row items-center justify-center gap-1 transition">
+        <span>🖨️</span>
+        <span>Cetak Print</span>
       </button>
     </div>
+
+    <!-- Status Indikator Proses Pembuatan File -->
+    <div id="downloadProcessBanner" class="hidden p-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-950 border border-amber-300 flex items-center justify-center gap-2">
+      <span class="inline-block w-4 h-4 border-2 border-amber-900 border-t-transparent rounded-full animate-spin"></span>
+      <span id="downloadProcessText">Sedang membuat file...</span>
+    </div>
+
     <div>
       <label class="block text-[11px] font-semibold text-gray-600 mb-1">Tautan / URL Halaman Absensi:</label>
       <input type="text" id="qrUrlInput" class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 font-mono focus:ring-2 focus:ring-amber-700 outline-none">
@@ -136,6 +161,75 @@
       }
     }
 
+    // Download Poster Siap Cetak sebagai Gambar JPEG
+    async function downloadPosterAsJpeg() {
+      const banner = document.getElementById('downloadProcessBanner');
+      const bannerText = document.getElementById('downloadProcessText');
+      const printBox = document.querySelector('.print-box');
+
+      bannerText.textContent = 'Memproses gambar JPEG resolusi tinggi...';
+      banner.classList.remove('hidden');
+
+      try {
+        const canvas = await html2canvas(printBox, {
+          scale: 3, // Skala 3x agar hasil print tajam dan tidak pecah
+          useCORS: true,
+          backgroundColor: '#FFFFFF'
+        });
+
+        const link = document.createElement('a');
+        link.download = 'POSTER_BARCODE_ABSENSI_KAPEBOONSEEN.jpg';
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+      } catch (err) {
+        alert('Gagal membuat gambar JPEG: ' + err.message);
+      } finally {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // Download Poster Siap Cetak sebagai Dokumen PDF (A4)
+    async function downloadPosterAsPdf() {
+      const banner = document.getElementById('downloadProcessBanner');
+      const bannerText = document.getElementById('downloadProcessText');
+      const printBox = document.querySelector('.print-box');
+
+      bannerText.textContent = 'Membuat dokumen PDF ukuran A4...';
+      banner.classList.remove('hidden');
+
+      try {
+        const canvas = await html2canvas(printBox, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: '#FFFFFF'
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        // Hitung proporsi gambar agar pas di tengah kertas A4
+        const imgWidth = 160; // Lebar 160mm (margin 25mm kiri kanan)
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const xPos = (pageWidth - imgWidth) / 2;
+        const yPos = Math.max(15, (pageHeight - imgHeight) / 2);
+
+        pdf.addImage(imgData, 'JPEG', xPos, yPos, imgWidth, imgHeight);
+        pdf.save('POSTER_BARCODE_ABSENSI_KAPEBOONSEEN.pdf');
+      } catch (err) {
+        alert('Gagal membuat PDF: ' + err.message);
+      } finally {
+        banner.classList.add('hidden');
+      }
+    }
+
     async function initPoster() {
       // Ambil Nama Kedai
       try {
@@ -147,7 +241,6 @@
       } catch (e) {}
 
       const input = document.getElementById('qrUrlInput');
-      // Jika dibuka di domain publik (misal Vercel), utamakan domain saat ini!
       let targetUrl = window.location.origin;
 
       // Hanya cari tunnel/IP lokal jika dibuka di localhost komputer
@@ -188,6 +281,10 @@
         generateQr(val);
         updateStatusBanner(val);
       });
+
+      // Pasang Event Listener Tombol Download
+      document.getElementById('btnDownloadJpeg').addEventListener('click', downloadPosterAsJpeg);
+      document.getElementById('btnDownloadPdf').addEventListener('click', downloadPosterAsPdf);
     }
 
     window.addEventListener('DOMContentLoaded', initPoster);

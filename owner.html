@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Dashboard Owner - KAPEBOONSEEN</title>
+  <title>Dashboard Owner & Rekap Presensi - KAPEBOONSEEN</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- SheetJS (XLSX) Library untuk Ekspor Excel Asli -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
     /* Styling khusus agar sangat mulus di HP */
@@ -30,10 +32,13 @@
           <img src="/images/logo.png" alt="Logo KAPEBOONSEEN" class="h-full w-full object-contain logo-white">
         </div>
         <div class="truncate">
-          <h1 id="ownerShopTitle" class="text-sm sm:text-lg font-black tracking-wider uppercase truncate">KAPEBOONSEEN</h1>
-          <p class="text-[10px] sm:text-xs text-[#E6CCB2] flex items-center gap-1">
+          <div class="flex items-center gap-1.5">
+            <h1 id="ownerShopTitle" class="text-sm sm:text-lg font-black tracking-wider uppercase truncate">KAPEBOONSEEN</h1>
+            <span id="ownerRoleBadge" class="bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded text-[10px] tracking-wider uppercase">Owner</span>
+          </div>
+          <p id="ownerUserSubtext" class="text-[10px] sm:text-xs text-[#E6CCB2] flex items-center gap-1">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-            Panel Pemilik
+            Panel Manajemen & Laporan
           </p>
         </div>
       </div>
@@ -61,31 +66,64 @@
     </div>
   </header>
 
-  <!-- Modal Login Khusus Owner (Jika belum login) -->
+  <!-- Modal Login Khusus Owner / Akun Berwenang -->
   <div id="ownerLoginModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
     <div class="coffee-card p-6 max-w-sm w-full space-y-4 shadow-2xl border-2 border-amber-900/20">
       <div class="text-center space-y-1">
         <div class="mb-2">
           <img src="/images/logo.png" alt="Logo KAPEBOONSEEN" class="h-16 w-auto mx-auto object-contain">
         </div>
-        <h2 class="text-xl font-black text-[#3A2010] uppercase">Login Owner Kedai</h2>
-        <p class="text-xs text-gray-500">Masukkan PIN Master Pemilik untuk mengakses laporan</p>
+        <h2 class="text-xl font-black text-[#3A2010] uppercase">Login Panel Laporan</h2>
+        <p class="text-xs text-gray-500">Pilih mode login sesuai wewenang akun Anda</p>
       </div>
 
+      <!-- Tab Switcher Login: Owner vs Pegawai Berwenang -->
+      <div class="flex p-1 bg-amber-100/70 rounded-xl border border-amber-200 text-xs font-bold">
+        <button type="button" id="tabBtnLoginOwner" class="flex-1 py-1.5 rounded-lg bg-[#5E391C] text-white shadow-sm transition">
+          Owner Kedai
+        </button>
+        <button type="button" id="tabBtnLoginSupervisor" class="flex-1 py-1.5 rounded-lg text-gray-700 hover:text-amber-950 transition">
+          Pegawai Berwenang
+        </button>
+      </div>
+
+      <!-- Form Login Owner (PIN Master) -->
       <form id="ownerLoginForm" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">PIN Master Owner</label>
           <input type="password" id="ownerPinInput" required placeholder="Masukkan PIN Owner"
-            class="w-full px-3 py-2.5 text-center tracking-widest text-lg font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] focus:border-[#8B5A2B] outline-none">
+            class="w-full px-3 py-2.5 text-center tracking-widest text-lg font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
         </div>
 
         <div id="ownerLoginError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs text-center font-medium"></div>
 
         <button type="submit" id="btnOwnerLoginSubmit" class="w-full btn-coffee py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-md">
           <i data-lucide="unlock" class="w-4 h-4"></i>
-          <span>Buka Dashboard</span>
+          <span>Buka Dashboard Owner</span>
         </button>
       </form>
+
+      <!-- Form Login Pegawai Berwenang (Supervisor) -->
+      <form id="supervisorLoginForm" class="space-y-3 hidden text-xs">
+        <div>
+          <label class="block font-semibold text-gray-700 uppercase mb-1">ID Pegawai</label>
+          <input type="text" id="supervisorEmpIdInput" placeholder="Contoh: CKBS01"
+            class="w-full px-3 py-2 uppercase font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-700 uppercase mb-1">PIN Pribadi</label>
+          <input type="password" id="supervisorPinInput" placeholder="Masukkan PIN Akun Anda"
+            class="w-full px-3 py-2 text-center tracking-widest text-base font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
+        </div>
+
+        <div id="supervisorLoginError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs text-center font-medium"></div>
+
+        <button type="submit" id="btnSupervisorLoginSubmit" class="w-full btn-coffee py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span>Buka Panel Rekap (Supervisor)</span>
+        </button>
+      </form>
+
       <div class="text-center pt-2">
         <a href="/" class="text-xs text-gray-500 hover:text-gray-800">&larr; Kembali ke Halaman Absensi</a>
       </div>
@@ -95,27 +133,50 @@
   <!-- Konten Utama Dashboard Owner -->
   <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
 
+    <!-- Banner Notifikasi Pengajuan Koreksi Check-Out (Real-Time Alert) -->
+    <div id="pendingCorrectionsAlert" class="hidden p-3.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="bell-ring" class="w-5 h-5 text-amber-100"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <p class="text-xs font-black uppercase tracking-wider">Permintaan Koreksi Check-Out Masuk!</p>
+            <span id="pendingCorrectionsBadge" class="bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full text-[10px]">0</span>
+          </div>
+          <p id="pendingCorrectionsSubtext" class="text-xs text-amber-100 mt-0.5">
+            Pegawai tidak sengaja menekan tombol Check-Out sebelum jam kepulangan sebenarnya.
+          </p>
+        </div>
+      </div>
+      <button id="btnOpenPendingCorrectionsModal" type="button" class="bg-white text-amber-950 px-4 py-2 rounded-xl text-xs font-black shadow hover:bg-amber-50 transition whitespace-nowrap flex items-center gap-1.5 self-stretch sm:self-auto justify-center">
+        <span>Tinjau & Berikan Izin</span>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+
+
     <!-- Navigasi Tab Menu (Horizontal Swipe di Layar HP) -->
     <nav class="flex gap-1.5 sm:gap-2 border-b border-amber-900/10 pb-2 overflow-x-auto no-scrollbar py-1">
-      <button class="tab-btn active px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#5E391C] text-white whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-daily">
+      <button id="navTabDaily" class="tab-btn active px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#5E391C] text-white whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-daily">
         <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
         <span>Harian</span>
       </button>
-      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-weekly">
+      <button id="navTabWeekly" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-weekly">
         <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
         <span>Mingguan</span>
       </button>
-      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-monthly">
+      <button id="navTabMonthly" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-monthly">
         <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i>
         <span>Bulanan (Payroll)</span>
       </button>
-      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-employees">
+      <button id="navTabEmployees" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-employees">
         <i data-lucide="users" class="w-3.5 h-3.5"></i>
         <span>Kelola Pegawai</span>
       </button>
-      <button class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-settings">
+      <button id="navTabSettings" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white text-gray-700 hover:bg-amber-50 whitespace-nowrap flex-shrink-0 shadow-sm" data-tab="tab-settings">
         <i data-lucide="settings" class="w-3.5 h-3.5"></i>
-        <span>Lokasi & GPS</span>
+        <span>Lokasi, GPS & Data</span>
       </button>
     </nav>
 
@@ -131,14 +192,18 @@
             <span>Muat</span>
           </button>
         </div>
-        <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+        <div class="grid grid-cols-3 sm:flex sm:items-center gap-2">
           <button onclick="window.print()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-semibold transition shadow-sm">
             <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-            <span>Cetak Rekap</span>
+            <span>Cetak</span>
           </button>
-          <button id="btnExportDailyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
+          <button id="btnExportDailyCsv" class="bg-white border border-emerald-600 hover:bg-emerald-50 text-emerald-800 px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>CSV</span>
+          </button>
+          <button id="btnExportDailyXlsx" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-            <span>Ekspor CSV</span>
+            <span>Excel (.xlsx)</span>
           </button>
         </div>
       </div>
@@ -209,10 +274,16 @@
             <span>Tampilkan</span>
           </button>
         </div>
-        <button id="btnExportWeeklyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
-          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-          <span>Ekspor CSV</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="btnExportWeeklyCsv" class="bg-white border border-emerald-600 hover:bg-emerald-50 text-emerald-800 px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>CSV</span>
+          </button>
+          <button id="btnExportWeeklyXlsx" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span>Excel (.xlsx)</span>
+          </button>
+        </div>
       </div>
 
       <div class="coffee-card overflow-hidden">
@@ -233,13 +304,14 @@
                 <th class="p-2.5 sm:p-3">Nama Pegawai</th>
                 <th class="p-2.5 sm:p-3">Jabatan</th>
                 <th class="p-2.5 sm:p-3 text-center">Hari Hadir</th>
-                <th class="p-2.5 sm:p-3 text-right">Total Menit</th>
-                <th class="p-2.5 sm:p-3 text-right">Total Jam Kerja</th>
+                <th class="p-2.5 sm:p-3 text-center">Terlambat</th>
+                <th class="p-2.5 sm:p-3">Total Menit</th>
+                <th class="p-2.5 sm:p-3">Total Jam Kerja</th>
               </tr>
             </thead>
             <tbody id="weeklyTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
-                <td colspan="6" class="p-6 text-center text-gray-400">Pilih rentang tanggal untuk melihat rekap mingguan.</td>
+                <td colspan="7" class="p-6 text-center text-gray-400">Pilih rentang tanggal dan klik tampilkan.</td>
               </tr>
             </tbody>
           </table>
@@ -247,32 +319,42 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 3: REKAPAN BULANAN (PAYROLL) ==================== -->
+    <!-- ==================== TAB 3: REKAPAN BULANAN ==================== -->
     <section id="tab-monthly" class="tab-content hidden space-y-3 sm:space-y-4">
       <div class="coffee-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div class="flex items-center gap-2">
-          <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Pilih Bulan:</label>
-          <input type="month" id="monthlyPicker" class="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-xl border border-gray-300 font-semibold outline-none">
+          <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Bulan:</label>
+          <input type="month" id="monthlyPicker" class="px-3 py-1.5 text-xs rounded-xl border border-gray-300 font-semibold outline-none">
           <button id="btnRefreshMonthly" class="btn-coffee px-3 py-1.5 text-xs rounded-xl flex items-center gap-1 font-bold shadow-sm">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>Tampilkan</span>
           </button>
         </div>
-        <button id="btnExportMonthlyCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
-          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-          <span>Ekspor Laporan Payroll (CSV)</span>
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnExportMonthlyCsv" class="bg-white border border-emerald-600 hover:bg-emerald-50 text-emerald-800 px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>CSV</span>
+          </button>
+          <button id="btnExportMonthlyXlsx" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span>Excel (.xlsx)</span>
+          </button>
+          <button id="btnExportAllLogsXlsx" class="bg-amber-900 hover:bg-amber-950 text-white px-3 py-1.5 text-xs rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm" title="Ekspor seluruh data absensi dari awal s/d sekarang">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Semua Riwayat (.xlsx)</span>
+          </button>
+        </div>
       </div>
 
       <div class="coffee-card overflow-hidden">
-        <div class="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-          <h3 class="font-bold text-xs sm:text-sm text-[#3A2010]">Rekapitulasi Bulanan Seluruh Pegawai</h3>
-          <p class="text-[10px] sm:text-[11px] text-gray-500">Acuan hitungan upah/gaji crew kedai</p>
+        <div class="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="font-bold text-xs sm:text-sm text-[#3A2010]">Rekapitulasi Bulanan (Dasar Gaji & Payroll)</h3>
+          <span id="monthlyTitle" class="text-xs text-gray-500 font-medium">-</span>
         </div>
 
         <div class="sm:hidden px-3 pt-2 text-[11px] text-amber-900 bg-amber-50/70 flex items-center gap-1.5 font-medium border-b border-amber-100 pb-1.5">
           <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-amber-700 flex-shrink-0"></i>
-          <span>Geser ke samping untuk melihat total hadir & durasi &rarr;</span>
+          <span>Geser ke samping untuk melihat total hadir & jam kerja &rarr;</span>
         </div>
 
         <div class="overflow-x-auto w-full">
@@ -282,14 +364,14 @@
                 <th class="p-2.5 sm:p-3">ID</th>
                 <th class="p-2.5 sm:p-3">Nama Pegawai</th>
                 <th class="p-2.5 sm:p-3">Jabatan</th>
-                <th class="p-2.5 sm:p-3 text-center">Hari Hadir</th>
-                <th class="p-2.5 sm:p-3 text-right">Total Menit</th>
-                <th class="p-2.5 sm:p-3 text-right">Total Jam Kerja</th>
+                <th class="p-2.5 sm:p-3 text-center">Total Hari Hadir</th>
+                <th class="p-2.5 sm:p-3">Total Menit</th>
+                <th class="p-2.5 sm:p-3">Total Jam Kerja</th>
               </tr>
             </thead>
             <tbody id="monthlyTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
-                <td colspan="6" class="p-6 text-center text-gray-400">Pilih bulan untuk melihat rekapitulasi.</td>
+                <td colspan="6" class="p-6 text-center text-gray-400">Pilih bulan dan klik tampilkan.</td>
               </tr>
             </tbody>
           </table>
@@ -297,12 +379,12 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 4: KELOLA PEGAWAI ==================== -->
+    <!-- ==================== TAB 4: KELOLA PEGAWAI (KHUSUS OWNER) ==================== -->
     <section id="tab-employees" class="tab-content hidden space-y-3 sm:space-y-4">
       <div class="coffee-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-xs sm:text-sm font-bold text-[#3A2010]">Manajemen Pegawai & Crew</h2>
-          <p class="text-[11px] text-gray-500">Tambah pegawai baru, atur PIN login, atau nonaktifkan akun crew.</p>
+          <h2 class="text-xs sm:text-sm font-bold text-[#3A2010]">Manajemen Pegawai & Hak Akses</h2>
+          <p class="text-[11px] text-gray-500">Tambah pegawai, atur PIN login, dan berikan izin akses laporan.</p>
         </div>
         <button id="btnOpenAddEmpModal" class="btn-coffee px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-2 shadow font-bold">
           <i data-lucide="user-plus" class="w-4 h-4"></i>
@@ -313,24 +395,25 @@
       <div class="coffee-card overflow-hidden">
         <div class="sm:hidden px-3 pt-2 text-[11px] text-amber-900 bg-amber-50/70 flex items-center gap-1.5 font-medium border-b border-amber-100 pb-1.5">
           <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-amber-700 flex-shrink-0"></i>
-          <span>Geser ke samping untuk melihat PIN & aksi edit &rarr;</span>
+          <span>Geser ke samping untuk melihat hak akses & aksi edit &rarr;</span>
         </div>
 
         <div class="overflow-x-auto w-full">
-          <table class="w-full text-left text-xs min-w-[550px]">
+          <table class="w-full text-left text-xs min-w-[620px]">
             <thead class="bg-amber-50/70 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th class="p-2.5 sm:p-3">ID</th>
                 <th class="p-2.5 sm:p-3">Nama Lengkap</th>
                 <th class="p-2.5 sm:p-3">Jabatan</th>
-                <th class="p-2.5 sm:p-3">PIN / Password</th>
+                <th class="p-2.5 sm:p-3">PIN Login</th>
+                <th class="p-2.5 sm:p-3">Hak Akses Laporan</th>
                 <th class="p-2.5 sm:p-3">Status</th>
                 <th class="p-2.5 sm:p-3 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody id="employeesTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
-                <td colspan="6" class="p-6 text-center text-gray-400">Memuat daftar pegawai...</td>
+                <td colspan="7" class="p-6 text-center text-gray-400">Memuat daftar pegawai...</td>
               </tr>
             </tbody>
           </table>
@@ -338,15 +421,27 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 5: PENGATURAN KEDAI & GPS ==================== -->
-    <section id="tab-settings" class="tab-content hidden space-y-3 sm:space-y-4">
-      <div class="coffee-card p-4 sm:p-6 max-w-2xl space-y-4 sm:space-y-5">
+    <!-- ==================== TAB 5: LOKASI GPS & CADANGAN DATA (KHUSUS OWNER) ==================== -->
+    <section id="tab-settings" class="tab-content hidden space-y-4">
+      
+      <!-- Kartu 1: Lokasi & Validasi GPS Kedai -->
+      <div class="coffee-card p-4 sm:p-6 max-w-2xl space-y-4">
         <div>
           <h2 class="text-sm sm:text-base font-bold text-[#3A2010]">Pengaturan Lokasi Kedai & Validasi GPS</h2>
           <p class="text-xs text-gray-500">Atur titik GPS kedai agar pegawai hanya bisa absensi saat berada di area kedai.</p>
         </div>
 
         <form id="settingsForm" class="space-y-3.5 text-xs">
+          
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Pilihan Jam Shift (Masuk & Pulang)</label>
+            <select id="setShiftTimeEnabled" class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-semibold">
+              <option value="1">Aktif (15:00, 18:00, 19:00 & 23:00 + Peringatan Terlambat 30 Menit)</option>
+              <option value="0">Nonaktif (Bebas / Tanpa Pilihan Waktu)</option>
+            </select>
+            <p class="text-[10px] text-gray-400 mt-0.5">Jika nonaktif, pegawai langsung absensi tanpa memilih jadwal shift.</p>
+          </div>
+
           <div>
             <label class="block font-semibold text-gray-700 mb-1">Nama Kedai Kopi</label>
             <input type="text" id="setShopName" required
@@ -406,6 +501,69 @@
           </button>
         </form>
       </div>
+
+      <!-- Kartu 2: Keamanan Data, Cadangan & Cloud Persistence -->
+      <div class="coffee-card p-4 sm:p-6 max-w-2xl space-y-4 border-2 border-emerald-900/20">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-[#3A2010]">Cadangan Data & Penyimpanan Permanen</h2>
+            <span id="dbModeBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">Memeriksa...</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-0.5">Pastikan data rekap absensi kedai selalu aman, tersimpan permanen, dan terlindungi.</p>
+        </div>
+
+        <div id="dbStatusCard" class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 space-y-1">
+          <p class="font-bold flex items-center gap-1.5" id="dbStatusTitle">
+            <i data-lucide="database" class="w-4 h-4 text-amber-700"></i>
+            <span>Status Penyimpanan</span>
+          </p>
+          <p class="text-[11px] text-gray-600" id="dbStatusDesc">Memuat status database...</p>
+        </div>
+
+        <!-- Tombol Aksi Backup & Restore -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div class="p-3 bg-white rounded-xl border border-gray-200 space-y-2">
+            <h4 class="font-bold text-xs text-[#3A2010] flex items-center gap-1.5">
+              <i data-lucide="download" class="w-4 h-4 text-emerald-600"></i>
+              <span>Unduh Cadangan (Backup)</span>
+            </h4>
+            <p class="text-[11px] text-gray-500">Simpan seluruh data pegawai, pengaturan, dan riwayat absensi ke dalam file di HP/Laptop Anda.</p>
+            <button type="button" id="btnDownloadBackup" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Download Backup (.json)</span>
+            </button>
+          </div>
+
+          <div class="p-3 bg-white rounded-xl border border-gray-200 space-y-2">
+            <h4 class="font-bold text-xs text-[#3A2010] flex items-center gap-1.5">
+              <i data-lucide="upload" class="w-4 h-4 text-blue-600"></i>
+              <span>Pulihkan Data (Restore)</span>
+            </h4>
+            <p class="text-[11px] text-gray-500">Pulihkan data absensi dari file cadangan yang sebelumnya pernah Anda unduh.</p>
+            <input type="file" id="inputRestoreBackup" accept=".json" class="hidden">
+            <button type="button" id="btnTriggerRestore" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Pilih File Backup (.json)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Proteksi Hapus Data Absensi (HANYA OWNER) -->
+        <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
+          <div class="flex items-center gap-1.5 font-bold text-rose-900">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+            <span>Area Berbahaya: Pembersihan Riwayat Absensi</span>
+          </div>
+          <p class="text-[11px] text-rose-700">
+            Data absensi tidak akan pernah terhapus otomatis oleh sistem. Hanya Owner yang dapat mengosongkan riwayat absensi (misal: saat tutup buku tahunan).
+          </p>
+          <button type="button" id="btnOpenClearModal" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Kosongkan Seluruh Riwayat Absensi</span>
+          </button>
+        </div>
+      </div>
+
     </section>
 
   </main>
@@ -440,14 +598,26 @@
             <option value="Kitchen / Cook">Kitchen / Cook</option>
             <option value="Head Bar">Head Bar</option>
             <option value="Server / Waiter">Server / Waiter</option>
+            <option value="Supervisor">Supervisor</option>
             <option value="Crew">Crew</option>
           </select>
         </div>
         <div>
           <label class="block font-semibold text-gray-700 mb-1">PIN / Password Sementara</label>
-          <input type="text" id="empPin" required placeholder="4 digit angka, misal: 1234"
+          <input type="text" id="empPin" required placeholder="4 - 6 digit angka"
             class="w-full px-3 py-2 font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none">
           <p class="text-[10px] text-gray-400 mt-1">PIN ini yang akan dimasukkan pegawai saat login absen.</p>
+        </div>
+
+        <!-- Checkbox Hak Akses Laporan (RBAC) -->
+        <div class="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">
+          <label class="flex items-center gap-2 cursor-pointer font-bold text-blue-950 text-xs">
+            <input type="checkbox" id="empCanAccessReports" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+            <span>Izinkan Akses Rekap & Laporan (Supervisor)</span>
+          </label>
+          <p class="text-[10px] text-blue-800/80 leading-tight">
+            Pegawai ini dapat membuka Dashboard dan mengunduh rekap Excel dengan ID & PIN pribadinya. (Menu Kelola Pegawai, GPS & Hapus Data tetap terkunci khusus Owner).
+          </p>
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
@@ -458,6 +628,30 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Hapus Riwayat Absensi (Owner Only) -->
+  <div id="clearAttendancesModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 sm:p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-base text-rose-950">Konfirmasi Pembersihan Data</h3>
+        <p class="text-xs text-gray-600 mt-1 leading-relaxed">
+          Tindakan ini akan <strong>menghapus seluruh catatan absensi</strong>. Data pegawai dan pengaturan kedai tetap tersimpan aman.
+        </p>
+      </div>
+      <div class="text-left bg-rose-50 p-3 rounded-xl border border-rose-200">
+        <label class="block text-[11px] font-bold text-rose-900 mb-1">Ketik kata <strong>HAPUS</strong> untuk melanjutkan:</label>
+        <input type="text" id="inputConfirmClearText" placeholder="Ketik HAPUS"
+          class="w-full px-3 py-2 text-xs uppercase font-mono rounded-lg border border-rose-300 text-center font-bold outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="btnCancelClearModal" class="flex-1 px-3 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-semibold">Batal</button>
+        <button type="button" id="btnConfirmClearAction" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl text-xs shadow transition">Hapus Permanen</button>
+      </div>
     </div>
   </div>
 
@@ -488,7 +682,48 @@
           <i data-lucide="copy" class="w-3.5 h-3.5"></i>
           <span>Salin Link Dashboard HP</span>
         </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnDownloadOwnerQrJpeg" type="button" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1">
+            <i data-lucide="image" class="w-3.5 h-3.5"></i>
+            <span>Simpan Gambar</span>
+          </button>
+          <a href="/print-qr.html" target="_blank" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Cetak Poster</span>
+          </a>
+        </div>
         <button id="btnDoneMobileOwnerQr" class="w-full btn-coffee py-2 rounded-xl text-xs font-bold shadow">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- Modal Tinjau & Setujui Koreksi Check-Out (KHUSUS OWNER) -->
+  <div id="correctionsReviewModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center">
+            <i data-lucide="check-square" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-[#3A2010]">Pengajuan Koreksi Check-Out</h3>
+            <p class="text-[10px] text-gray-500">Izin pembatalan check-out bagi pegawai yang salah klik pulang</p>
+          </div>
+        </div>
+        <button id="btnCloseCorrectionsReviewModal" type="button" class="text-gray-400 hover:text-gray-600 p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="correctionsReviewList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+        <div class="p-6 text-center text-gray-400 text-xs">Memuat pengajuan koreksi...</div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-gray-100">
+        <button type="button" id="btnDoneCorrectionsReviewModal" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition">
           Tutup
         </button>
       </div>
