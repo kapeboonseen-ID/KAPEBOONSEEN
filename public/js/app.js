@@ -338,7 +338,7 @@ function renderAttendanceState() {
         </div>
 
         <!-- Tombol Check-Out (Akan dinonaktifkan jika belum 105 menit) -->
-        <button id="btnDoCheckOut"
+        <button id="btnDoCheckOut" type="button" onclick="handleCheckOut()"
           class="w-full btn-checkout py-4 rounded-xl text-base font-bold flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.99]">
           <i data-lucide="log-out" class="w-5 h-5"></i>
           <span>CHECK OUT (PULANG)</span>
@@ -346,6 +346,11 @@ function renderAttendanceState() {
         <p class="text-[11px] text-gray-400">Tekan tombol di atas saat jam kerja Anda selesai.</p>
       </div>
     `;
+
+    const btnOut = document.getElementById('btnDoCheckOut');
+    if (btnOut) {
+      btnOut.onclick = handleCheckOut;
+    }
 
     // Mulai pemantauan kunci 105 menit
     startCheckoutLockCountdown();
@@ -485,15 +490,17 @@ function startCheckoutLockCountdown() {
         `;
       }
     } else {
-      // Waktu 105 menit telah terpenuhi! Tombol dibuka
-      if (btnOut && btnOut.disabled) {
+      // Waktu 105 menit telah terpenuhi! Tombol dibuka dan event click dipastikan aktif
+      if (btnOut) {
         btnOut.disabled = false;
-        btnOut.className = 'w-full btn-checkout py-4 rounded-xl text-base font-bold flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.99]';
-        btnOut.innerHTML = `
-          <i data-lucide="log-out" class="w-5 h-5"></i>
-          <span>CHECK OUT (PULANG)</span>
-        `;
         btnOut.onclick = handleCheckOut;
+        if (!btnOut.classList.contains('btn-checkout')) {
+          btnOut.className = 'w-full btn-checkout py-4 rounded-xl text-base font-bold flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.99]';
+          btnOut.innerHTML = `
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+            <span>CHECK OUT (PULANG)</span>
+          `;
+        }
       }
       if (lockBanner) {
         lockBanner.classList.add('hidden');
@@ -615,10 +622,26 @@ async function executeCheckIn(isLate) {
 }
 
 // ==================== PROSES CHECK-OUT ====================
-async function handleCheckOut() {
-  if (!confirm('Apakah Anda yakin ingin melakukan Check-Out (pulang) sekarang?')) {
+window.handleCheckOut = function() {
+  const btn = document.getElementById('btnDoCheckOut');
+  if (btn && btn.disabled) return;
+
+  const modal = document.getElementById('confirmCheckOutModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
     return;
   }
+
+  // Fallback jika modal tidak ada di DOM
+  if (confirm('Apakah Anda yakin ingin melakukan Check-Out (pulang) sekarang?')) {
+    executeCheckOut();
+  }
+};
+
+window.executeCheckOut = async function() {
+  const modal = document.getElementById('confirmCheckOutModal');
+  if (modal) modal.classList.add('hidden');
 
   const btn = document.getElementById('btnDoCheckOut');
   if (btn) {
@@ -652,14 +675,14 @@ async function handleCheckOut() {
       showToast(data.message, 'success');
       await checkAttendanceStatus();
     } else {
-      showToast(data.message, 'error');
+      showToast(data.message || 'Gagal melakukan check-out', 'error');
       renderAttendanceState();
     }
   } catch (err) {
     showToast('Terjadi kesalahan jaringan: ' + err.message, 'error');
     renderAttendanceState();
   }
-}
+};
 
 // ==================== MODAL & PROSES PENGAJUAN KOREKSI ====================
 function openCorrectionModal() {
@@ -941,6 +964,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const formCorrection = document.getElementById('formRequestCorrection');
   if (formCorrection) formCorrection.addEventListener('submit', handleSubmitCorrection);
+
+  // Modal Konfirmasi Check-Out
+  const btnCancelCheckOut = document.getElementById('btnCancelCheckOutModal');
+  if (btnCancelCheckOut) {
+    btnCancelCheckOut.addEventListener('click', () => {
+      const modal = document.getElementById('confirmCheckOutModal');
+      if (modal) modal.classList.add('hidden');
+    });
+  }
+
+  const btnConfirmCheckOut = document.getElementById('btnConfirmCheckOutModal');
+  if (btnConfirmCheckOut) {
+    btnConfirmCheckOut.addEventListener('click', () => {
+      executeCheckOut();
+    });
+  }
 
   restoreSession();
 

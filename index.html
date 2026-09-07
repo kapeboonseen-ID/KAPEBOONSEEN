@@ -80,8 +80,11 @@
 
         <button type="submit" id="btnLoginSubmit" class="w-full btn-coffee py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-md">
           <i data-lucide="log-in" class="w-4 h-4"></i>
-          <span>Masuk & Lakukan Absensi</span>
+          <span>Masuk ke Akun Presensi</span>
         </button>
+        <p class="text-[11px] text-gray-500 text-center leading-tight">
+          *Setelah masuk, pilih jam shift Anda dan tekan <strong>CHECK IN SEKARANG</strong> untuk mencatat kehadiran ke server.
+        </p>
       </form>
 
       <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
@@ -327,6 +330,29 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Check-Out Kepulangan (Anti-Block di Instagram/Safari) -->
+  <div id="confirmCheckOutModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-14 h-14 rounded-full bg-amber-100 text-[#5E391C] flex items-center justify-center mx-auto">
+        <i data-lucide="log-out" class="w-7 h-7"></i>
+      </div>
+      <div>
+        <h3 class="font-black text-lg text-[#3A2010]">Konfirmasi Check-Out</h3>
+        <p class="text-xs text-gray-600 mt-1 leading-relaxed">
+          Apakah Anda yakin ingin menyelesaikan shift dan <strong>Check-Out (pulang)</strong> sekarang?
+        </p>
+      </div>
+      <div class="flex items-center gap-2 pt-2">
+        <button id="btnCancelCheckOutModal" type="button" class="flex-1 px-3 py-3 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold text-xs transition">
+          Batal
+        </button>
+        <button id="btnConfirmCheckOutModal" type="button" class="flex-1 btn-checkout py-3 rounded-xl text-white font-bold text-xs shadow-md transition active:scale-[0.98]">
+          Ya, Check-Out
+        </button>
+      </div>
     </div>
   </div>
 
