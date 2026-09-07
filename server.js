@@ -132,6 +132,12 @@ async function handleRequest(req, res) {
     }
   }
 
+  // Jika dipanggil via Vercel dynamic catch-all
+  if (req.query && req.query.all) {
+    const subpath = Array.isArray(req.query.all) ? req.query.all.join('/') : String(req.query.all);
+    rawUrl = '/api/' + subpath;
+  }
+
   const parsedUrl = url.parse(rawUrl, true);
   let pathname = parsedUrl.pathname || '/';
 
