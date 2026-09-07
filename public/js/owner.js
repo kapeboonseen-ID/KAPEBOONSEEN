@@ -768,7 +768,6 @@ window.confirmDeleteAttendance = async function() {
     }
   }
 };
-}
 
 function updateDailyStats(present, active, completed) {
   document.getElementById('statDailyTotalPresent').textContent = `${present} Pegawai`;
@@ -1539,7 +1538,7 @@ function closeMobileOwnerQrModal() {
 }
 
 // ==================== EVENT LISTENERS & INIT ====================
-document.addEventListener('DOMContentLoaded', () => {
+function initOwnerApp() {
   initTabs();
 
   // Tab Switcher pada Modal Login
@@ -1762,4 +1761,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 15000);
 
   if (window.lucide) lucide.createIcons();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initOwnerApp);
+} else {
+  initOwnerApp();
+}
