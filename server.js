@@ -121,20 +121,25 @@ async function getAuthorizedUser(req) {
 
 // Request Handler Utama
 async function handleRequest(req, res) {
-  // Normalisasi URL untuk Vercel Serverless Function & Cloudflare Tunnel
+  // Ambil URL permintaan
   let rawUrl = req.url || '/';
-  if (req.headers) {
-    if (req.headers['x-matched-path']) {
-      rawUrl = req.headers['x-matched-path'];
-    } else if (req.headers['x-vercel-matched-path']) {
-      rawUrl = req.headers['x-vercel-matched-path'];
-    } else if (req.headers['x-forwarded-uri']) {
-      rawUrl = req.headers['x-forwarded-uri'];
+
+  // Hanya jika rawUrl tidak memiliki path API, gunakan fallback header reverse proxy / Vercel
+  if (!rawUrl || rawUrl === '/' || !rawUrl.startsWith('/api')) {
+    const matched = req.headers && (req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'] || req.headers['x-forwarded-uri']);
+    if (matched && !matched.includes('[') && matched.startsWith('/api')) {
+      rawUrl = matched;
     }
   }
 
   const parsedUrl = url.parse(rawUrl, true);
   let pathname = parsedUrl.pathname || '/';
+
+  // Bersihkan ekstensi .js jika ada (misal /api/admin/verify.js -> /api/admin/verify)
+  if (pathname.startsWith('/api/') && pathname.endsWith('.js')) {
+    pathname = pathname.replace(/\.js$/, '');
+  }
+
   if (!pathname.startsWith('/api/') && pathname !== '/api') {
     if (pathname.startsWith('/admin/') || pathname.startsWith('/auth/') || 
         pathname.startsWith('/attendance/') || pathname.startsWith('/settings/') || 
