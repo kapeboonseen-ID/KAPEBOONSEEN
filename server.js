@@ -397,6 +397,29 @@ async function handleRequest(req, res) {
         });
       }
 
+      // 5d. Pengajuan Koreksi Jam Shift Masuk oleh Pegawai (Salah Pilih Jam Masuk)
+      if (pathname === '/api/attendance/request-shift-correction' && method === 'POST') {
+        const { employee_id, pin, date, new_shift_in, reason } = await parseJsonBody(req);
+        const emp = await db.findEmployeeByCredentials(employee_id, pin);
+        if (!emp) {
+          return sendJson(res, 401, { success: false, message: 'Autentikasi gagal. PIN atau ID salah.' });
+        }
+
+        const record = await db.getTodayAttendance(employee_id, date || new Date().toISOString().split('T')[0]);
+        if (!record) {
+          return sendJson(res, 400, { success: false, message: 'Tidak ditemukan catatan presensi hari ini.' });
+        }
+        if (record.status !== 'CHECKED_IN') {
+          return sendJson(res, 400, { success: false, message: 'Koreksi jam shift masuk hanya dapat diajukan saat Anda sedang bertugas (sebelum Check-Out).' });
+        }
+
+        await db.requestShiftCorrection(record.id, new_shift_in, reason || 'Salah memilih jam shift masuk');
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Pengajuan koreksi jam shift masuk telah dikirim ke Owner! Mohon tunggu konfirmasi persetujuan Owner di dashboard.'
+        });
+      }
+
       // 5c. Ganti PIN Akun Pribadi Pegawai
       if (pathname === '/api/attendance/change-pin' && method === 'POST') {
         const { employee_id, old_pin, new_pin } = await parseJsonBody(req);
@@ -510,6 +533,33 @@ async function handleRequest(req, res) {
 
         await db.rejectCheckoutCorrection(attendance_id);
         return sendJson(res, 200, { success: true, message: 'Pengajuan koreksi check-out ditolak.' });
+      }
+
+      // 7e. Persetujuan Koreksi Jam Shift Masuk (KHUSUS OWNER)
+      if (pathname === '/api/admin/corrections/approve-shift' && method === 'POST') {
+        if (!(await isOwnerAuthorized(req))) {
+          return sendJson(res, 403, { success: false, message: 'Hanya Owner yang dapat menyetujui koreksi jam shift.' });
+        }
+        const { attendance_id } = await parseJsonBody(req);
+        if (!attendance_id) return sendJson(res, 400, { success: false, message: 'attendance_id wajib diisi' });
+
+        await db.approveShiftCorrection(attendance_id);
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Koreksi jam shift masuk berhasil disetujui! Jam shift dan status keterlambatan telah diperbarui.'
+        });
+      }
+
+      // 7f. Penolakan Koreksi Jam Shift Masuk (KHUSUS OWNER)
+      if (pathname === '/api/admin/corrections/reject-shift' && method === 'POST') {
+        if (!(await isOwnerAuthorized(req))) {
+          return sendJson(res, 403, { success: false, message: 'Hanya Owner yang dapat menolak koreksi jam shift.' });
+        }
+        const { attendance_id } = await parseJsonBody(req);
+        if (!attendance_id) return sendJson(res, 400, { success: false, message: 'attendance_id wajib diisi' });
+
+        await db.rejectShiftCorrection(attendance_id);
+        return sendJson(res, 200, { success: true, message: 'Pengajuan koreksi jam shift ditolak.' });
       }
 
       // 8. Rekapan Harian (Owner & Supervisor)
@@ -702,6 +752,19 @@ async function handleRequest(req, res) {
         if (!attendance_id) return sendJson(res, 400, { success: false, message: 'attendance_id wajib diisi' });
         await db.deleteAttendanceRecord(attendance_id);
         return sendJson(res, 200, { success: true, message: 'Catatan absensi berhasil dihapus.' });
+      }
+
+      // 16b. Update / Edit 1 Baris Catatan Absensi (KHUSUS OWNER)
+      if ((pathname === '/api/admin/attendance/update') && (method === 'POST' || method === 'PUT')) {
+        if (!(await isOwnerAuthorized(req))) {
+          return sendJson(res, 403, { success: false, message: 'Hanya Owner yang memiliki wewenang mengedit data absensi.' });
+        }
+        const body = await parseJsonBody(req);
+        const { attendance_id } = body;
+        if (!attendance_id) return sendJson(res, 400, { success: false, message: 'attendance_id wajib diisi' });
+
+        await db.updateAttendanceRecord(attendance_id, body);
+        return sendJson(res, 200, { success: true, message: 'Catatan absensi berhasil diperbarui!' });
       }
 
       // Jika endpoint API tidak ditemukan

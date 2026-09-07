@@ -313,10 +313,36 @@ function renderAttendanceState() {
       `;
     }
 
+    // Cek apakah pegawai sedang mengajukan koreksi shift masuk
+    let shiftCorrAreaHtml = '';
+    if (attendanceRecord.correction_status === 'PENDING_SHIFT') {
+      shiftCorrAreaHtml = `
+        <div class="p-2.5 bg-purple-50 border border-purple-300 rounded-xl text-xs text-purple-950 text-left space-y-1 my-2">
+          <div class="flex items-center gap-1.5 font-bold text-purple-900">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-purple-700 animate-spin"></i>
+            <span>Koreksi Shift Sedang Ditinjau Owner</span>
+          </div>
+          <p class="text-[11px] text-purple-800 leading-tight">
+            Pengajuan perubahan ke shift <strong>${attendanceRecord.requested_shift_in || ''}</strong> telah dikirim ke Dashboard Owner.
+          </p>
+        </div>
+      `;
+    } else if (shopSettings.shift_time_enabled !== false) {
+      shiftCorrAreaHtml = `
+        <div class="pt-1.5">
+          <button id="btnOpenShiftCorrectionModal" type="button"
+            class="text-[11px] text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 font-semibold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-sm">
+            <i data-lucide="edit-3" class="w-3 h-3 text-amber-700"></i>
+            <span>Salah Pilih Jam Masuk? Ajukan Koreksi</span>
+          </button>
+        </div>
+      `;
+    }
+
     container.innerHTML = `
       <div class="space-y-4">
-        <div class="inline-flex p-3 rounded-full bg-amber-100 text-amber-900">
-          <i data-lucide="coffee" class="w-8 h-8 text-[#5E391C]"></i>
+        <div class="inline-flex p-3 rounded-full bg-emerald-100 text-emerald-800">
+          <i data-lucide="coffee" class="w-8 h-8"></i>
         </div>
         <div>
           <div class="badge-status badge-present text-xs py-1 px-3 mb-1 inline-flex items-center gap-1.5">
@@ -329,6 +355,7 @@ function renderAttendanceState() {
             ${attendanceRecord.scheduled_in ? ` (Shift ${attendanceRecord.scheduled_in})` : ''}
             ${attendanceRecord.is_late === 1 ? '<span class="ml-1 px-1.5 py-0.5 bg-rose-100 text-rose-700 font-bold rounded text-[10px]">Terlambat</span>' : ''}
           </p>
+          ${shiftCorrAreaHtml}
         </div>
 
         ${shiftOutHtml}
@@ -350,6 +377,11 @@ function renderAttendanceState() {
     const btnOut = document.getElementById('btnDoCheckOut');
     if (btnOut) {
       btnOut.onclick = handleCheckOut;
+    }
+
+    const btnOpenShiftCorr = document.getElementById('btnOpenShiftCorrectionModal');
+    if (btnOpenShiftCorr) {
+      btnOpenShiftCorr.onclick = openShiftCorrectionModal;
     }
 
     // Mulai pemantauan kunci 105 menit
@@ -730,6 +762,84 @@ async function handleSubmitCorrection(e) {
   }
 }
 
+// ==================== MODAL KOREKSI SHIFT MASUK ====================
+window.selectShiftCorrectionVal = function(time) {
+  const inputEl = document.getElementById('shiftCorrectionValInput');
+  if (inputEl) inputEl.value = time;
+  document.querySelectorAll('.shift-corr-btn').forEach(b => {
+    if (b.getAttribute('data-shift') === time) {
+      b.classList.remove('border-gray-200', 'bg-white', 'text-gray-800');
+      b.classList.add('border-[#8B5A2B]', 'bg-[#5E391C]', 'text-white');
+    } else {
+      b.classList.remove('border-[#8B5A2B]', 'bg-[#5E391C]', 'text-white');
+      b.classList.add('border-gray-200', 'bg-white', 'text-gray-800');
+    }
+  });
+};
+
+function openShiftCorrectionModal() {
+  const reasonEl = document.getElementById('shiftCorrectionReasonInput');
+  if (reasonEl) reasonEl.value = 'Salah pilih jam shift saat check-in.';
+  const inputEl = document.getElementById('shiftCorrectionValInput');
+  if (inputEl) inputEl.value = '';
+  document.querySelectorAll('.shift-corr-btn').forEach(b => {
+    b.classList.remove('border-[#8B5A2B]', 'bg-[#5E391C]', 'text-white');
+    b.classList.add('border-gray-200', 'bg-white', 'text-gray-800');
+  });
+  const modal = document.getElementById('shiftCorrectionModal');
+  if (modal) modal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeShiftCorrectionModal() {
+  const modal = document.getElementById('shiftCorrectionModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function handleSubmitShiftCorrection(e) {
+  e.preventDefault();
+  const inputEl = document.getElementById('shiftCorrectionValInput');
+  const selectedShift = inputEl ? inputEl.value : '';
+  if (!selectedShift) {
+    showToast('Pilih jam shift masuk yang benar terlebih dahulu!', 'error');
+    return;
+  }
+
+  const reason = document.getElementById('shiftCorrectionReasonInput').value.trim();
+  const btn = document.getElementById('btnSubmitShiftCorrection');
+  btn.disabled = true;
+  btn.innerHTML = 'Mengirim...';
+
+  try {
+    const res = await fetch('/api/attendance/request-shift-correction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employee_id: currentUser.employee_id,
+        pin: currentPin,
+        date: getTodayDateStr(),
+        new_shift_in: selectedShift,
+        reason: reason || 'Salah pilih jam shift masuk'
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      closeShiftCorrectionModal();
+      await checkAttendanceStatus();
+    } else {
+      showToast(data.message || 'Gagal mengirim koreksi shift.', 'error');
+    }
+  } catch (err) {
+    showToast('Gagal mengirim pengajuan: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i> <span>Kirim ke Owner</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
 // ==================== LOGIN & SESI ====================
 async function handleLogin(e) {
   e.preventDefault();
@@ -955,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Modal Pengajuan Koreksi
+  // Modal Pengajuan Koreksi Check-Out
   const btnCloseCorr = document.getElementById('btnCloseCorrectionModal');
   if (btnCloseCorr) btnCloseCorr.addEventListener('click', closeCorrectionModal);
 
@@ -964,6 +1074,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const formCorrection = document.getElementById('formRequestCorrection');
   if (formCorrection) formCorrection.addEventListener('submit', handleSubmitCorrection);
+
+  // Modal Pengajuan Koreksi Jam Masuk (Shift)
+  const btnCloseShiftCorr = document.getElementById('btnCloseShiftCorrectionModal');
+  if (btnCloseShiftCorr) btnCloseShiftCorr.addEventListener('click', closeShiftCorrectionModal);
+
+  const btnCancelShiftCorr = document.getElementById('btnCancelShiftCorrection');
+  if (btnCancelShiftCorr) btnCancelShiftCorr.addEventListener('click', closeShiftCorrectionModal);
+
+  const formShiftCorr = document.getElementById('formRequestShiftCorrection');
+  if (formShiftCorr) formShiftCorr.addEventListener('submit', handleSubmitShiftCorrection);
 
   // Modal Konfirmasi Check-Out
   const btnCancelCheckOut = document.getElementById('btnCancelCheckOutModal');

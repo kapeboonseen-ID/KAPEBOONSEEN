@@ -276,7 +276,7 @@ function loadTabContent(tabId) {
   if (tabId === 'tab-settings') loadSettings();
 }
 
-// ==================== ALERTI & PERSETUJUAN KOREKSI CHECK-OUT ====================
+// ==================== ALERTI & PERSETUJUAN KOREKSI CHECK-OUT & SHIFT ====================
 async function checkPendingCorrections() {
   try {
     const res = await fetch('/api/admin/corrections/pending', {
@@ -291,7 +291,7 @@ async function checkPendingCorrections() {
       if (alertEl) alertEl.classList.remove('hidden');
       if (badgeEl) badgeEl.textContent = `${data.count} Baru`;
       if (subtextEl) {
-        subtextEl.textContent = `Ada ${data.count} pegawai mengajukan pembatalan check-out karena salah klik.`;
+        subtextEl.textContent = `Ada ${data.count} pengajuan koreksi (salah klik / perbaikan shift) menunggu persetujuan.`;
       }
     } else {
       if (alertEl) alertEl.classList.add('hidden');
@@ -328,6 +328,54 @@ async function openCorrectionsReviewModal() {
     }
 
     listEl.innerHTML = data.corrections.map(c => {
+      // Kasus 1: Koreksi Jam Shift Masuk
+      if (c.correction_status === 'PENDING_SHIFT') {
+        return `
+          <div class="p-4 bg-purple-50/70 border border-purple-300 rounded-2xl space-y-3">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-xs bg-purple-200 text-purple-950 px-2 py-0.5 rounded">${c.employee_id}</span>
+                  <h4 class="font-bold text-sm text-[#3A2010]">${c.name}</h4>
+                  <span class="text-[11px] text-gray-500">(${c.role})</span>
+                  <span class="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded border border-purple-200">Koreksi Shift</span>
+                </div>
+                <p class="text-[11px] text-gray-600 mt-1.5">
+                  Tanggal: <strong>${c.date}</strong> | Jam Masuk Riil: <strong>${c.check_in_time}</strong>
+                </p>
+                <p class="text-xs text-purple-950 mt-1">
+                  Shift Sebelumnya: <span class="line-through text-gray-500 font-mono font-semibold">${c.scheduled_in || '-'}</span> 
+                  &rarr; Diajukan: <strong class="bg-purple-200 text-purple-950 px-2 py-0.5 rounded font-mono font-bold">${c.requested_shift_in}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div class="p-2.5 bg-white rounded-xl border border-gray-200 text-xs">
+              <span class="text-[10px] text-gray-400 block font-bold uppercase">Alasan Pegawai:</span>
+              <p class="text-gray-800 font-medium italic mt-0.5">"${c.correction_reason || 'Salah pilih jam masuk saat presensi'}"</p>
+            </div>
+
+            <div class="p-2 rounded-lg bg-purple-100/60 text-[11px] text-purple-900 flex items-center gap-1.5">
+              <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 text-purple-700"></i>
+              <span>Jika disetujui, shift masuk akan diubah menjadi ${c.requested_shift_in} dan status keterlambatan (+30 menit) otomatis dihitung ulang.</span>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="handleRejectShiftCorrection(${c.id})"
+                class="flex-1 px-3 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold transition">
+                Tolak
+              </button>
+              <button onclick="handleApproveShiftCorrection(${c.id})"
+                class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2 rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>Setujui Perubahan Shift</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Kasus 2: Koreksi Check-Out Salah Klik (PENDING)
       return `
         <div class="p-4 bg-amber-50/70 border border-amber-300 rounded-2xl space-y-3">
           <div class="flex items-start justify-between">
@@ -336,6 +384,7 @@ async function openCorrectionsReviewModal() {
                 <span class="font-mono font-bold text-xs bg-amber-200 text-amber-950 px-2 py-0.5 rounded">${c.employee_id}</span>
                 <h4 class="font-bold text-sm text-[#3A2010]">${c.name}</h4>
                 <span class="text-[11px] text-gray-500">(${c.role})</span>
+                <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded border border-amber-200">Koreksi Check-Out</span>
               </div>
               <p class="text-[11px] text-gray-600 mt-1">
                 Tanggal: <strong>${c.date}</strong> | Masuk: <strong>${c.check_in_time}</strong> | Check-Out Salah: <strong class="text-rose-700">${c.check_out_time}</strong>
@@ -419,6 +468,51 @@ window.handleRejectCorrection = async function(attendanceId) {
   }
 };
 
+window.handleApproveShiftCorrection = async function(attendanceId) {
+  if (!confirm('Setujui koreksi jam shift ini? Jam shift masuk dan status keterlambatan (+30 menit) akan otomatis dihitung ulang.')) {
+    return;
+  }
+  try {
+    const res = await fetch('/api/admin/corrections/approve-shift', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ attendance_id: attendanceId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Koreksi jam shift berhasil disetujui!', 'success');
+      openCorrectionsReviewModal();
+      checkPendingCorrections();
+      loadDailyRecap();
+    } else {
+      showToast(data.message || 'Gagal menyetujui koreksi jam shift.', 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan: ' + err.message, 'error');
+  }
+};
+
+window.handleRejectShiftCorrection = async function(attendanceId) {
+  if (!confirm('Tolak pengajuan koreksi jam shift ini?')) return;
+  try {
+    const res = await fetch('/api/admin/corrections/reject-shift', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ attendance_id: attendanceId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Pengajuan koreksi jam shift telah ditolak.', 'info');
+      openCorrectionsReviewModal();
+      checkPendingCorrections();
+    } else {
+      showToast(data.message || 'Gagal menolak.', 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan: ' + err.message, 'error');
+  }
+};
+
 // ==================== 1. TAB REKAPAN HARIAN ====================
 async function loadDailyRecap() {
   const picker = document.getElementById('dailyDatePicker');
@@ -427,7 +521,7 @@ async function loadDailyRecap() {
 
   document.getElementById('dailyDateTitle').textContent = `Tanggal: ${dateStr}`;
   const tbody = document.getElementById('dailyTableBody');
-  tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-gray-400">Memuat data presensi harian...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-gray-400">Memuat data presensi harian...</td></tr>';
 
   try {
     const res = await fetch(`/api/admin/recap/daily?date=${dateStr}`, {
@@ -436,21 +530,21 @@ async function loadDailyRecap() {
     const data = await res.json();
 
     if (!data.success) {
-      tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-500">${data.message || 'Gagal memuat rekap.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-rose-500">${data.message || 'Gagal memuat rekap.'}</td></tr>`;
       return;
     }
 
     currentDailyData = data.recap || [];
     renderDailyTable(currentDailyData);
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-500">Koneksi gagal: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-rose-500">Koneksi gagal: ${err.message}</td></tr>`;
   }
 }
 
 function renderDailyTable(list) {
   const tbody = document.getElementById('dailyTableBody');
   if (!list || list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-gray-400">Tidak ada pegawai terdaftar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-gray-400">Tidak ada pegawai terdaftar.</td></tr>';
     updateDailyStats(0, 0, 0);
     return;
   }
@@ -496,6 +590,25 @@ function renderDailyTable(list) {
       `;
     }
 
+    // Kolom Aksi Edit & Hapus Catatan Presensi (Khusus Owner)
+    let aksiHtml = '<span class="text-gray-400 font-mono text-xs">-</span>';
+    if (authRole !== 'supervisor' && r.attendance_id) {
+      aksiHtml = `
+        <div class="flex items-center justify-center gap-1.5">
+          <button type="button" onclick="openEditAttendanceModal(${r.attendance_id})" title="Edit Data & Jam Presensi"
+            class="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
+            <i data-lucide="edit-2" class="w-3.5 h-3.5 text-amber-800"></i>
+            <span class="hidden sm:inline">Edit</span>
+          </button>
+          <button type="button" onclick="handleDeleteAttendance(${r.attendance_id}, '${(r.name || '').replace(/'/g, "\\'")}', '${r.date || ''}')" title="Hapus Catatan Presensi Ini"
+            class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-600"></i>
+            <span class="hidden sm:inline">Hapus</span>
+          </button>
+        </div>
+      `;
+    }
+
     html += `
       <tr class="hover:bg-amber-50/40 transition">
         <td class="p-2.5 sm:p-3 font-mono font-bold text-gray-800">${r.employee_id}</td>
@@ -513,12 +626,148 @@ function renderDailyTable(list) {
         <td class="p-2.5 sm:p-3 font-mono text-gray-600">${distText}</td>
         <td class="p-2.5 sm:p-3 font-bold text-amber-950">${durText}</td>
         <td class="p-2.5 sm:p-3 text-center">${statusBadge}</td>
+        <td class="p-2.5 sm:p-3 text-center whitespace-nowrap">${aksiHtml}</td>
       </tr>
     `;
   });
 
   tbody.innerHTML = html;
   updateDailyStats(totalPresent, totalActive, totalCompleted);
+  if (window.lucide) lucide.createIcons();
+}
+
+// ==================== EDIT & HAPUS CATATAN ABSENSI (KHUSUS OWNER) ====================
+window.openEditAttendanceModal = function(attendanceId) {
+  if (authRole === 'supervisor') {
+    showToast('Hanya Owner yang berwenang mengedit catatan presensi.', 'error');
+    return;
+  }
+  const record = (currentDailyData || []).find(r => r.attendance_id === attendanceId);
+  if (!record) {
+    showToast('Data presensi tidak ditemukan.', 'error');
+    return;
+  }
+
+  document.getElementById('editAttId').value = record.attendance_id;
+  document.getElementById('editAttSubtext').textContent = `Pegawai: ${record.employee_id} - ${record.name} | Tanggal: ${record.date || getTodayDateStr()}`;
+  document.getElementById('editAttCheckIn').value = record.check_in_time || '';
+  document.getElementById('editAttScheduledIn').value = record.scheduled_in || '';
+  document.getElementById('editAttCheckOut').value = record.check_out_time || '';
+  document.getElementById('editAttScheduledOut').value = record.scheduled_out || '';
+  document.getElementById('editAttStatus').value = record.status || 'COMPLETED';
+  document.getElementById('editAttIsLate').value = (record.is_late === 1) ? '1' : '0';
+  document.getElementById('editAttNotes').value = record.notes || '';
+
+  const modal = document.getElementById('editAttendanceModal');
+  if (modal) modal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+};
+
+window.closeEditAttendanceModal = function() {
+  const modal = document.getElementById('editAttendanceModal');
+  if (modal) modal.classList.add('hidden');
+};
+
+window.handleSaveAttendanceEdit = async function(e) {
+  if (e) e.preventDefault();
+  const attId = document.getElementById('editAttId').value;
+  if (!attId) return;
+
+  const btn = document.getElementById('btnSubmitEditAtt');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Menyimpan...';
+  }
+
+  const payload = {
+    attendance_id: parseInt(attId, 10),
+    check_in_time: document.getElementById('editAttCheckIn').value.trim(),
+    scheduled_in: document.getElementById('editAttScheduledIn').value || null,
+    check_out_time: document.getElementById('editAttCheckOut').value.trim() || null,
+    scheduled_out: document.getElementById('editAttScheduledOut').value || null,
+    status: document.getElementById('editAttStatus').value,
+    is_late: parseInt(document.getElementById('editAttIsLate').value, 10),
+    notes: document.getElementById('editAttNotes').value.trim()
+  };
+
+  try {
+    const res = await fetch('/api/admin/attendance/update', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Catatan presensi berhasil diperbarui!', 'success');
+      closeEditAttendanceModal();
+      loadDailyRecap();
+    } else {
+      showToast(data.message || 'Gagal menyimpan perubahan.', 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> <span>Simpan Perubahan</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+};
+
+window.handleDeleteAttendance = function(attendanceId, empName, date) {
+  if (authRole === 'supervisor') {
+    showToast('Hanya Owner yang berwenang menghapus catatan presensi.', 'error');
+    return;
+  }
+  document.getElementById('deleteSingleAttIdHidden').value = attendanceId;
+  const textEl = document.getElementById('deleteSingleAttText');
+  if (textEl) {
+    textEl.innerHTML = `Yakin ingin menghapus catatan presensi <strong>${empName || 'Pegawai'}</strong> pada tanggal <strong>${date || ''}</strong>?<br><span class="text-rose-600 font-semibold mt-1 inline-block">Data jam masuk & jam pulang presensi ini akan dihapus permanen.</span>`;
+  }
+  const modal = document.getElementById('deleteSingleAttendanceModal');
+  if (modal) modal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+};
+
+window.closeDeleteSingleAttendanceModal = function() {
+  const modal = document.getElementById('deleteSingleAttendanceModal');
+  if (modal) modal.classList.add('hidden');
+};
+
+window.confirmDeleteAttendance = async function() {
+  const attId = document.getElementById('deleteSingleAttIdHidden').value;
+  if (!attId) return;
+
+  const btn = document.getElementById('btnConfirmDeleteSingleAtt');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Menghapus...';
+  }
+
+  try {
+    const res = await fetch('/api/admin/attendance/delete', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ attendance_id: parseInt(attId, 10) })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Catatan presensi berhasil dihapus.', 'success');
+      closeDeleteSingleAttendanceModal();
+      loadDailyRecap();
+    } else {
+      showToast(data.message || 'Gagal menghapus catatan presensi.', 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Hapus Presensi';
+    }
+  }
+};
 }
 
 function updateDailyStats(present, active, completed) {
@@ -1471,6 +1720,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('clearAttendancesModal').classList.add('hidden');
   });
   document.getElementById('btnConfirmClearAction')?.addEventListener('click', handleClearAttendancesAction);
+
+  // Modal Edit Catatan Presensi
+  document.getElementById('btnCloseEditAttModal')?.addEventListener('click', closeEditAttendanceModal);
+  document.getElementById('btnCancelEditAttModal')?.addEventListener('click', closeEditAttendanceModal);
+  document.getElementById('formEditAttendance')?.addEventListener('submit', handleSaveAttendanceEdit);
+
+  // Modal Hapus 1 Baris Presensi
+  document.getElementById('btnCancelDeleteSingleAtt')?.addEventListener('click', closeDeleteSingleAttendanceModal);
+  document.getElementById('btnConfirmDeleteSingleAtt')?.addEventListener('click', confirmDeleteAttendance);
 
   // Cek otentikasi awal saat halaman dibuka
   verifyOwnerAccess();

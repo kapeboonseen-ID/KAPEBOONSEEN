@@ -222,6 +222,7 @@ async function initDatabase() {
           correction_status TEXT,
           correction_reason TEXT,
           first_checkout_time TEXT,
+          requested_shift_in TEXT,
           notes TEXT
         )
       `);
@@ -234,6 +235,7 @@ async function initDatabase() {
         'ALTER TABLE attendances ADD COLUMN correction_status TEXT',
         'ALTER TABLE attendances ADD COLUMN correction_reason TEXT',
         'ALTER TABLE attendances ADD COLUMN first_checkout_time TEXT',
+        'ALTER TABLE attendances ADD COLUMN requested_shift_in TEXT',
         'ALTER TABLE attendances ADD COLUMN notes TEXT'
       ];
       for (const colSql of alterCols) {
@@ -340,6 +342,7 @@ async function initDatabase() {
         correction_status TEXT,
         correction_reason TEXT,
         first_checkout_time TEXT,
+        requested_shift_in TEXT,
         notes TEXT
       );
     `);
@@ -351,6 +354,7 @@ async function initDatabase() {
     try { db.exec('ALTER TABLE attendances ADD COLUMN correction_status TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE attendances ADD COLUMN correction_reason TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE attendances ADD COLUMN first_checkout_time TEXT'); } catch (e) {}
+    try { db.exec('ALTER TABLE attendances ADD COLUMN requested_shift_in TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE attendances ADD COLUMN notes TEXT'); } catch (e) {}
 
     const defaultSettings = [
@@ -998,6 +1002,222 @@ async function rejectCheckoutCorrection(attendanceId) {
   return { changes: 1 };
 }
 
+// 3b. Update Catatan Absensi oleh Owner (Edit Lengkap)
+async function updateAttendanceRecord(attendanceId, updates) {
+  const idNum = Number(attendanceId);
+  const {
+    check_in_time,
+    check_out_time,
+    scheduled_in,
+    scheduled_out,
+    is_late,
+    status,
+    notes
+  } = updates;
+
+  // Hitung ulang total_minutes jika check_in_time & check_out_time terisi
+  let totalMinutes = 0;
+  if (check_in_time && check_out_time) {
+    const [hIn, mIn] = check_in_time.split(':').map(Number);
+    const [hOut, mOut] = check_out_time.split(':').map(Number);
+    totalMinutes = (hOut * 60 + mOut) - (hIn * 60 + mIn);
+    if (totalMinutes < 0) totalMinutes += 24 * 60;
+  }
+
+  const finalStatus = status || (check_out_time ? 'COMPLETED' : 'CHECKED_IN');
+  const lateInt = (is_late === 1 || is_late === '1' || is_late === true) ? 1 : 0;
+
+  if (TURSO_URL && TURSO_TOKEN) {
+    return tursoExecute(`
+      UPDATE attendances 
+      SET check_in_time = ?,
+          check_out_time = ?,
+          scheduled_in = ?,
+          scheduled_out = ?,
+          is_late = ?,
+          status = ?,
+          total_minutes = ?,
+          notes = ?
+      WHERE id = ?
+    `, [
+      check_in_time || null,
+      check_out_time || null,
+      scheduled_in || null,
+      scheduled_out || null,
+      lateInt,
+      finalStatus,
+      totalMinutes,
+      notes || null,
+      idNum
+    ]);
+  }
+
+  if (db) {
+    const stmt = db.prepare(`
+      UPDATE attendances 
+      SET check_in_time = ?,
+          check_out_time = ?,
+          scheduled_in = ?,
+          scheduled_out = ?,
+          is_late = ?,
+          status = ?,
+          total_minutes = ?,
+          notes = ?
+      WHERE id = ?
+    `);
+    return stmt.run(
+      check_in_time || null,
+      check_out_time || null,
+      scheduled_in || null,
+      scheduled_out || null,
+      lateInt,
+      finalStatus,
+      totalMinutes,
+      notes || null,
+      idNum
+    );
+  }
+
+  const store = loadJsonStore();
+  const att = store.attendances.find(a => a.id === idNum);
+  if (att) {
+    att.check_in_time = check_in_time || null;
+    att.check_out_time = check_out_time || null;
+    att.scheduled_in = scheduled_in || null;
+    att.scheduled_out = scheduled_out || null;
+    att.is_late = lateInt;
+    att.status = finalStatus;
+    att.total_minutes = totalMinutes;
+    att.notes = notes || null;
+    saveJsonStore();
+  }
+  return { changes: 1 };
+}
+
+// 3c. Pengajuan Koreksi Jam Shift Masuk oleh Pegawai
+async function requestShiftCorrection(attendanceId, newShiftIn, reason) {
+  const idNum = Number(attendanceId);
+  const cleanShift = String(newShiftIn || '').trim();
+  const cleanReason = String(reason || 'Salah memilih jam shift masuk').trim();
+
+  if (TURSO_URL && TURSO_TOKEN) {
+    return tursoExecute(`
+      UPDATE attendances 
+      SET correction_status = 'PENDING_SHIFT',
+          requested_shift_in = ?,
+          correction_reason = ?
+      WHERE id = ?
+    `, [cleanShift, cleanReason, idNum]);
+  }
+
+  if (db) {
+    const stmt = db.prepare(`
+      UPDATE attendances 
+      SET correction_status = 'PENDING_SHIFT',
+          requested_shift_in = ?,
+          correction_reason = ?
+      WHERE id = ?
+    `);
+    return stmt.run(cleanShift, cleanReason, idNum);
+  }
+
+  const store = loadJsonStore();
+  const att = store.attendances.find(a => a.id === idNum);
+  if (att) {
+    att.correction_status = 'PENDING_SHIFT';
+    att.requested_shift_in = cleanShift;
+    att.correction_reason = cleanReason;
+    saveJsonStore();
+  }
+  return { changes: 1 };
+}
+
+// 3d. Owner Menyetujui Koreksi Jam Shift Masuk
+async function approveShiftCorrection(attendanceId) {
+  const idNum = Number(attendanceId);
+
+  let record = null;
+  if (TURSO_URL && TURSO_TOKEN) {
+    const res = await tursoExecute('SELECT * FROM attendances WHERE id = ?', [idNum]);
+    record = res.rows && res.rows[0];
+  } else if (db) {
+    record = db.prepare('SELECT * FROM attendances WHERE id = ?').get(idNum);
+  } else {
+    const store = loadJsonStore();
+    record = store.attendances.find(a => a.id === idNum);
+  }
+
+  if (!record) throw new Error('Data absensi tidak ditemukan');
+
+  const newShift = record.requested_shift_in || record.scheduled_in;
+  const inTime = record.check_in_time || '00:00:00';
+
+  // Hitung ulang keterlambatan terhadap jam shift baru
+  let isLate = 0;
+  if (newShift) {
+    const [schedH, schedM] = newShift.split(':').map(Number);
+    const [nowH, nowM] = inTime.split(':').map(Number);
+    const diff = (nowH * 60 + nowM) - (schedH * 60 + schedM);
+    if (diff >= 30) isLate = 1;
+  }
+
+  const noteMsg = `Koreksi shift masuk disetujui: ${record.scheduled_in || '-'} ➔ ${newShift}`;
+  const updatedNotes = record.notes ? `${record.notes} | ${noteMsg}` : noteMsg;
+
+  if (TURSO_URL && TURSO_TOKEN) {
+    return tursoExecute(`
+      UPDATE attendances 
+      SET scheduled_in = ?,
+          is_late = ?,
+          correction_status = 'APPROVED_SHIFT',
+          notes = ?
+      WHERE id = ?
+    `, [newShift, isLate, updatedNotes, idNum]);
+  }
+
+  if (db) {
+    return db.prepare(`
+      UPDATE attendances 
+      SET scheduled_in = ?,
+          is_late = ?,
+          correction_status = 'APPROVED_SHIFT',
+          notes = ?
+      WHERE id = ?
+    `).run(newShift, isLate, updatedNotes, idNum);
+  }
+
+  const store = loadJsonStore();
+  const att = store.attendances.find(a => a.id === idNum);
+  if (att) {
+    att.scheduled_in = newShift;
+    att.is_late = isLate;
+    att.correction_status = 'APPROVED_SHIFT';
+    att.notes = updatedNotes;
+    saveJsonStore();
+  }
+  return { changes: 1 };
+}
+
+// 3e. Owner Menolak Koreksi Jam Shift Masuk
+async function rejectShiftCorrection(attendanceId) {
+  const idNum = Number(attendanceId);
+  if (TURSO_URL && TURSO_TOKEN) {
+    return tursoExecute(`
+      UPDATE attendances SET correction_status = 'REJECTED_SHIFT' WHERE id = ?
+    `, [idNum]);
+  }
+  if (db) {
+    return db.prepare("UPDATE attendances SET correction_status = 'REJECTED_SHIFT' WHERE id = ?").run(idNum);
+  }
+  const store = loadJsonStore();
+  const att = store.attendances.find(a => a.id === idNum);
+  if (att) {
+    att.correction_status = 'REJECTED_SHIFT';
+    saveJsonStore();
+  }
+  return { changes: 1 };
+}
+
 // 4. Dapatkan Daftar Pengajuan Koreksi yang Menunggu (Pending)
 async function getPendingCorrections() {
   if (TURSO_URL && TURSO_TOKEN) {
@@ -1005,10 +1225,11 @@ async function getPendingCorrections() {
       const res = await tursoExecute(`
         SELECT a.id, a.employee_id, COALESCE(e.name, a.employee_id) as name, 
                COALESCE(e.role, 'Crew') as role, a.date, a.check_in_time, a.check_out_time,
+               a.scheduled_in, a.requested_shift_in,
                a.correction_reason, a.correction_status
         FROM attendances a
         LEFT JOIN employees e ON UPPER(a.employee_id) = UPPER(e.employee_id)
-        WHERE a.correction_status = 'PENDING'
+        WHERE a.correction_status IN ('PENDING', 'PENDING_SHIFT')
         ORDER BY a.id DESC
       `);
       return res.rows || [];
@@ -1018,17 +1239,18 @@ async function getPendingCorrections() {
     return db.prepare(`
       SELECT a.id, a.employee_id, COALESCE(e.name, a.employee_id) as name, 
              COALESCE(e.role, 'Crew') as role, a.date, a.check_in_time, a.check_out_time,
+             a.scheduled_in, a.requested_shift_in,
              a.correction_reason, a.correction_status
       FROM attendances a
       LEFT JOIN employees e ON UPPER(a.employee_id) = UPPER(e.employee_id)
-      WHERE a.correction_status = 'PENDING'
+      WHERE a.correction_status IN ('PENDING', 'PENDING_SHIFT')
       ORDER BY a.id DESC
     `).all();
   }
   const store = loadJsonStore();
   const empMap = new Map(store.employees.map(e => [e.employee_id.toUpperCase(), e]));
   return store.attendances
-    .filter(a => a.correction_status === 'PENDING')
+    .filter(a => a.correction_status === 'PENDING' || a.correction_status === 'PENDING_SHIFT')
     .map(a => {
       const emp = empMap.get(a.employee_id.toUpperCase()) || {};
       return {
@@ -1039,6 +1261,8 @@ async function getPendingCorrections() {
         date: a.date,
         check_in_time: a.check_in_time,
         check_out_time: a.check_out_time,
+        scheduled_in: a.scheduled_in,
+        requested_shift_in: a.requested_shift_in,
         correction_reason: a.correction_reason,
         correction_status: a.correction_status
       };
@@ -1693,6 +1917,10 @@ module.exports = {
   requestCheckoutCorrection,
   approveCheckoutCorrection,
   rejectCheckoutCorrection,
+  updateAttendanceRecord,
+  requestShiftCorrection,
+  approveShiftCorrection,
+  rejectShiftCorrection,
   getPendingCorrections,
   getEmployeeSummary,
   getDailyRecapForAdmin,

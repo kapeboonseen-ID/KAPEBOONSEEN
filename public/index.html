@@ -333,6 +333,57 @@
     </div>
   </div>
 
+  <!-- Modal Ajukan Koreksi Jam Masuk (Shift) Sebelum Check-Out -->
+  <div id="shiftCorrectionModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 max-w-sm w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-sm text-[#3A2010]">Koreksi Shift Masuk</h3>
+        </div>
+        <button id="btnCloseShiftCorrectionModal" type="button" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+        <p class="font-bold">⚠️ Salah memilih jam shift saat Check-In?</p>
+        <p class="text-[11px] text-gray-600 leading-relaxed">
+          Pilih jam shift masuk yang benar di bawah ini. Setelah Anda mengirim pengajuan, Owner akan meninjau dan menyetujuinya di Dashboard.
+        </p>
+      </div>
+
+      <form id="formRequestShiftCorrection" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1.5">Pilih Jam Shift yang Sebenarnya:</label>
+          <div class="grid grid-cols-3 gap-2" id="shiftCorrectionGrid">
+            <button type="button" onclick="selectShiftCorrectionVal('15:00')" class="shift-corr-btn py-2.5 rounded-xl border-2 border-gray-200 font-bold text-xs hover:border-[#8B5A2B] transition" data-shift="15:00">15:00</button>
+            <button type="button" onclick="selectShiftCorrectionVal('18:00')" class="shift-corr-btn py-2.5 rounded-xl border-2 border-gray-200 font-bold text-xs hover:border-[#8B5A2B] transition" data-shift="18:00">18:00</button>
+            <button type="button" onclick="selectShiftCorrectionVal('19:00')" class="shift-corr-btn py-2.5 rounded-xl border-2 border-gray-200 font-bold text-xs hover:border-[#8B5A2B] transition" data-shift="19:00">19:00</button>
+          </div>
+          <input type="hidden" id="shiftCorrectionValInput" required>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">Alasan Koreksi:</label>
+          <textarea id="shiftCorrectionReasonInput" rows="2" required
+            class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none"
+            placeholder="Contoh: Salah klik jam masuk saat awal tugas.">Salah pilih jam shift saat check-in.</textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+          <button type="button" id="btnCancelShiftCorrection" class="px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium">Batal</button>
+          <button type="submit" id="btnSubmitShiftCorrection" class="btn-coffee px-4 py-2 rounded-lg font-bold flex items-center gap-1 shadow">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Kirim ke Owner</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Konfirmasi Check-Out Kepulangan (Anti-Block di Instagram/Safari) -->
   <div id="confirmCheckOutModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
     <div class="coffee-card p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">

@@ -238,7 +238,7 @@
         </div>
 
         <div class="overflow-x-auto w-full">
-          <table class="w-full text-left text-xs min-w-[660px]">
+          <table class="w-full text-left text-xs min-w-[720px]">
             <thead class="bg-amber-50/70 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th class="p-2.5 sm:p-3">ID</th>
@@ -249,11 +249,12 @@
                 <th class="p-2.5 sm:p-3">Jarak GPS</th>
                 <th class="p-2.5 sm:p-3">Durasi</th>
                 <th class="p-2.5 sm:p-3 text-center">Status</th>
+                <th class="p-2.5 sm:p-3 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody id="dailyTableBody" class="divide-y divide-gray-100 font-medium">
               <tr>
-                <td colspan="8" class="p-6 text-center text-gray-400">Memuat data presensi...</td>
+                <td colspan="9" class="p-6 text-center text-gray-400">Memuat data presensi...</td>
               </tr>
             </tbody>
           </table>
@@ -584,6 +585,7 @@
           <label class="block font-semibold text-gray-700 mb-1">ID Pegawai (Unik)</label>
           <input type="text" id="empIdCode" required placeholder="Contoh: CKBS06"
             class="w-full px-3 py-2 uppercase rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#8B5A2B] outline-none font-mono">
+          <p class="text-[10px] text-gray-400 mt-1">ID dapat diubah kapan saja oleh Owner (riwayat absensi otomatis tersinkronisasi).</p>
         </div>
         <div>
           <label class="block font-semibold text-gray-700 mb-1">Nama Lengkap</label>
@@ -726,6 +728,115 @@
         <button type="button" id="btnDoneCorrectionsReviewModal" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition">
           Tutup
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Riwayat Absensi (Owner Only) -->
+  <div id="editAttendanceModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-[#3A2010]">Edit Catatan Presensi</h3>
+            <p class="text-[10px] text-gray-500" id="editAttSubtext">Pegawai: - | Tanggal: -</p>
+          </div>
+        </div>
+        <button id="btnCloseEditAttModal" type="button" class="text-gray-400 hover:text-gray-600 p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="formEditAttendance" class="space-y-3 text-xs">
+        <input type="hidden" id="editAttId">
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Jam Masuk (Check-In)</label>
+            <input type="time" step="1" id="editAttCheckIn" required
+              class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Shift Masuk (Jadwal)</label>
+            <select id="editAttScheduledIn" class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+              <option value="">-- Tanpa Shift --</option>
+              <option value="15:00">15:00</option>
+              <option value="18:00">18:00</option>
+              <option value="19:00">19:00</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Jam Pulang (Check-Out)</label>
+            <input type="time" step="1" id="editAttCheckOut"
+              class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+            <span class="text-[10px] text-gray-400">Kosongkan jika masih tugas</span>
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Shift Pulang (Jadwal)</label>
+            <select id="editAttScheduledOut" class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+              <option value="">-- Tanpa Shift --</option>
+              <option value="00:00">00:00</option>
+              <option value="01:00">01:00</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Status Absensi</label>
+            <select id="editAttStatus" class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 font-semibold outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+              <option value="CHECKED_IN">SEDANG TUGAS</option>
+              <option value="COMPLETED">SELESAI (PULANG)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700 mb-1">Status Keterlambatan</label>
+            <select id="editAttIsLate" class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 font-semibold outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+              <option value="0">Tepat Waktu (Tidak Terlambat)</option>
+              <option value="1">Terlambat (+30 Menit)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">Catatan / Keterangan Edit</label>
+          <input type="text" id="editAttNotes" placeholder="Contoh: Koreksi jam masuk disesuaikan jadwal asli"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+          <button type="button" id="btnCancelEditAttModal" class="px-3.5 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium">Batal</button>
+          <button type="submit" id="btnSubmitEditAtt" class="btn-coffee px-4 py-2 rounded-xl font-bold flex items-center gap-1 shadow">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Simpan Perubahan</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Hapus 1 Baris Presensi (Owner Only) -->
+  <div id="deleteSingleAttendanceModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+        <i data-lucide="trash-2" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-base text-rose-950">Hapus Catatan Presensi</h3>
+        <p class="text-xs text-gray-600 mt-1 leading-relaxed" id="deleteSingleAttText">
+          Apakah Anda yakin ingin menghapus catatan presensi pegawai ini?
+        </p>
+      </div>
+      <input type="hidden" id="deleteSingleAttIdHidden">
+      <div class="flex items-center gap-2 pt-1">
+        <button type="button" id="btnCancelDeleteSingleAtt" class="flex-1 px-3 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-semibold">Batal</button>
+        <button type="button" id="btnConfirmDeleteSingleAtt" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl text-xs shadow transition">Hapus Presensi</button>
       </div>
     </div>
   </div>
