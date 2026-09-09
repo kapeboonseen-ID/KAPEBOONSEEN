@@ -188,20 +188,21 @@ async function handleRequest(req, res) {
         const host = req.headers['x-forwarded-host'] || req.headers['host'];
         const proto = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http');
         const isCloud = host && !host.includes('localhost') && !host.includes('127.0.0.1');
-        const cloudUrl = isCloud ? `${proto}://${host}` : null;
+        const cloudUrl = isCloud ? `${proto}://${host}` : 'https://kapeboonseen.vercel.app';
 
         const localUrl = ips.length > 0 ? `http://${ips[0]}:${PORT}` : `http://localhost:${PORT}`;
-        const activeUrl = cloudUrl || tunnelUrl || localUrl;
+        const activeUrl = isCloud ? cloudUrl : (tunnelUrl || 'https://kapeboonseen.vercel.app');
 
         return sendJson(res, 200, {
           success: true,
           port: PORT,
+          production_url: 'https://kapeboonseen.vercel.app',
           cloud_url: cloudUrl,
           local_ip: ips.length > 0 ? ips[0] : 'localhost',
           local_url: localUrl,
           tunnel_url: tunnelUrl,
           active_url: activeUrl,
-          is_https: !!cloudUrl || !!tunnelUrl
+          is_https: true
         });
       }
 
@@ -213,7 +214,7 @@ async function handleRequest(req, res) {
           latitude: parseFloat(settings.latitude) || -6.2088,
           longitude: parseFloat(settings.longitude) || 106.8456,
           radius_meters: parseInt(settings.radius_meters, 10) || 50,
-          gps_enforced: settings.gps_enforced === '1',
+          gps_enforced: settings.gps_enforced !== '0',
           shift_time_enabled: settings.shift_time_enabled !== '0'
         });
       }
@@ -298,26 +299,27 @@ async function handleRequest(req, res) {
         const shopLat = parseFloat(settings.latitude);
         const shopLng = parseFloat(settings.longitude);
         const radiusMeters = parseInt(settings.radius_meters, 10) || 50;
-        const gpsEnforced = settings.gps_enforced === '1';
+        const gpsEnforced = settings.gps_enforced !== '0';
 
-        let distance = 0;
-        if (lat !== undefined && lng !== undefined) {
-          distance = db.calculateDistanceMeters(lat, lng, shopLat, shopLng);
-        }
+        const parsedLat = (lat !== undefined && lat !== null && lat !== '') ? parseFloat(lat) : null;
+        const parsedLng = (lng !== undefined && lng !== null && lng !== '') ? parseFloat(lng) : null;
+        const hasValidCoords = parsedLat !== null && parsedLng !== null && !isNaN(parsedLat) && !isNaN(parsedLng);
+
+        let distance = hasValidCoords ? db.calculateDistanceMeters(parsedLat, parsedLng, shopLat, shopLng) : 999999;
 
         // Jika GPS wajib dan pegawai di luar radius
         if (gpsEnforced) {
-          if (lat === undefined || lng === undefined) {
+          if (!hasValidCoords) {
             return sendJson(res, 400, {
               success: false,
-              message: 'Gagal mendeteksi lokasi GPS Anda. Pastikan GPS HP aktif dan Anda memberikan izin lokasi ke browser.'
+              message: 'Check-In gagal! Lokasi GPS HP Anda tidak terdeteksi. Pastikan GPS HP aktif dan Anda memberikan izin akses lokasi pada browser.'
             });
           }
 
           if (distance > radiusMeters) {
             return sendJson(res, 403, {
               success: false,
-              message: `Anda berada di luar area kedai kopi! Jarak Anda saat ini: ${distance} meter (Batas toleransi: ${radiusMeters} meter). Silakan mendekat ke area kedai/meja barcode.`
+              message: `Check-In gagal! Anda berada di luar area kedai kopi. Jarak Anda saat ini: ${distance} meter (Batas toleransi radius: ${radiusMeters} meter). Anda harus berada di dalam area kedai untuk melakukan Check-In.`
             });
           }
         }
@@ -334,7 +336,7 @@ async function handleRequest(req, res) {
         }
 
         // Catat Check-in
-        await db.createCheckIn(employee_id, date, time, lat || null, lng || null, distance, scheduled_in || null, isLate);
+        await db.createCheckIn(employee_id, date, time, parsedLat, parsedLng, distance, scheduled_in || null, isLate);
 
         return sendJson(res, 200, {
           success: true,
@@ -389,14 +391,37 @@ async function handleRequest(req, res) {
           });
         }
 
-        // Hitung jarak saat check out jika ada koordinat
+        // Validasi Lokasi GPS Kedai untuk Check-Out
         const settings = await db.getAllSettings();
-        let distance = 0;
-        if (lat !== undefined && lng !== undefined) {
-          distance = db.calculateDistanceMeters(lat, lng, parseFloat(settings.latitude), parseFloat(settings.longitude));
+        const shopLat = parseFloat(settings.latitude);
+        const shopLng = parseFloat(settings.longitude);
+        const radiusMeters = parseInt(settings.radius_meters, 10) || 50;
+        const gpsEnforced = settings.gps_enforced !== '0';
+
+        const parsedLat = (lat !== undefined && lat !== null && lat !== '') ? parseFloat(lat) : null;
+        const parsedLng = (lng !== undefined && lng !== null && lng !== '') ? parseFloat(lng) : null;
+        const hasValidCoords = parsedLat !== null && parsedLng !== null && !isNaN(parsedLat) && !isNaN(parsedLng);
+
+        let distance = hasValidCoords ? db.calculateDistanceMeters(parsedLat, parsedLng, shopLat, shopLng) : 999999;
+
+        // Validasi radius kedai untuk Check-Out
+        if (gpsEnforced) {
+          if (!hasValidCoords) {
+            return sendJson(res, 400, {
+              success: false,
+              message: 'Check-Out gagal! Lokasi GPS HP Anda tidak terdeteksi. Pastikan GPS HP aktif dan Anda memberikan izin lokasi ke browser untuk menyelesaikan tugas/pulang.'
+            });
+          }
+
+          if (distance > radiusMeters) {
+            return sendJson(res, 403, {
+              success: false,
+              message: `Check-Out gagal! Anda berada di luar area kedai kopi. Jarak Anda saat ini: ${distance} meter (Batas toleransi radius: ${radiusMeters} meter). Anda harus berada di dalam area kedai untuk melakukan Check-Out.`
+            });
+          }
         }
 
-        await db.performCheckOut(record.id, time, lat || null, lng || null, distance, totalMinutes, scheduled_out || null);
+        await db.performCheckOut(record.id, time, parsedLat, parsedLng, distance, totalMinutes, scheduled_out || null);
 
         const durationInfo = db.formatMinutesToHours(totalMinutes);
 
@@ -818,6 +843,36 @@ async function handleRequest(req, res) {
         return sendJson(res, 200, { success: true, message: 'Catatan absensi berhasil diperbarui!' });
       }
 
+      // 16c. Selesaikan Check-Out oleh Owner (Penyelesaian Pegawai Lupa Check-Out)
+      if (pathname === '/api/admin/attendance/force-checkout' && method === 'POST') {
+        if (!(await isOwnerAuthorized(req))) {
+          return sendJson(res, 403, { success: false, message: 'Hanya Owner yang memiliki wewenang menyelesaikan check-out pegawai.' });
+        }
+        const body = await parseJsonBody(req);
+        const { attendance_id, check_out_time, scheduled_out, notes } = body;
+        if (!attendance_id || !check_out_time) {
+          return sendJson(res, 400, { success: false, message: 'attendance_id dan check_out_time wajib diisi' });
+        }
+
+        const result = await db.ownerForceCheckOut(attendance_id, check_out_time, scheduled_out, notes);
+        return sendJson(res, 200, {
+          success: true,
+          message: `Check-out berhasil diselesaikan! Durasi kerja tercatat: ${result.formatted_duration.textShort}.`,
+          data: result
+        });
+      }
+
+      // 16d. Dapatkan Presensi yang Belum Check-Out (Unclosed Attendances)
+      if (pathname === '/api/admin/attendance/unclosed' && method === 'GET') {
+        const authUser = await getAuthorizedUser(req);
+        if (!authUser || !authUser.can_access_reports) {
+          return sendJson(res, 403, { success: false, message: 'Akses ditolak.' });
+        }
+        const beforeDate = parsedUrl.query.before || null;
+        const list = await db.getUnclosedAttendances(beforeDate);
+        return sendJson(res, 200, { success: true, count: list.length, attendances: list });
+      }
+
       // Jika endpoint API tidak ditemukan
       return sendJson(res, 404, { success: false, message: 'Endpoint API tidak ditemukan' });
     } catch (err) {
@@ -872,12 +927,13 @@ if (require.main === module) {
     console.log('         KAPEBOONSEEN - SISTEM ABSENSI CREW         ');
     console.log('====================================================');
     console.log(`Server berhasil berjalan!`);
-    console.log(`- Akses Lokal di Komputer Ini : http://localhost:${PORT}`);
+    console.log(`- Tautan Absensi Online (Vercel) : https://kapeboonseen.vercel.app`);
+    console.log(`- Halaman Cetak Barcode Kedai    : http://localhost:${PORT}/print-qr.html`);
+    console.log(`- Dashboard Owner / Pemilik      : http://localhost:${PORT}/owner.html`);
+    console.log(`- Akses Lokal di Komputer Ini    : http://localhost:${PORT}`);
     if (ips.length > 0) {
-      console.log(`- Akses dari HP / WiFi Kedai : http://${ips[0]}:${PORT}`);
+      console.log(`- Akses WiFi Lokal Kedai         : http://${ips[0]}:${PORT}`);
     }
-    console.log(`- Halaman Owner / Pemilik    : http://localhost:${PORT}/owner.html`);
-    console.log(`- Halaman Cetak Barcode Kedai: http://localhost:${PORT}/print-qr.html`);
     console.log('====================================================');
 
     // Jalankan Cloudflare Tunnel gratis untuk akses HP (HTTPS + GPS)

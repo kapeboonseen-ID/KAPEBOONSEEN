@@ -61,13 +61,18 @@
     </div>
 
     <div>
-      <label class="block text-[11px] font-semibold text-gray-600 mb-1">Tautan / URL Halaman Absensi:</label>
-      <input type="text" id="qrUrlInput" class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 font-mono focus:ring-2 focus:ring-amber-700 outline-none">
-      <div id="connectionStatusBanner" class="mt-2 p-2 rounded-lg text-[11px] font-medium bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1.5">
-        <span>Memeriksa koneksi server...</span>
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-[11px] font-semibold text-gray-700">Tautan / URL Halaman Absensi:</label>
+        <button id="btnResetOfficialUrl" type="button" class="text-[11px] text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer">
+          Reset ke Link Resmi Vercel
+        </button>
+      </div>
+      <input type="text" id="qrUrlInput" value="https://kapeboonseen.vercel.app" class="w-full px-3 py-2 text-xs rounded-lg border border-amber-300 font-mono font-bold text-amber-950 bg-amber-50/40 focus:ring-2 focus:ring-amber-700 outline-none">
+      <div id="connectionStatusBanner" class="mt-2 p-2.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-900 border border-emerald-300 flex items-center gap-2">
+        <span>✅ <strong>Tautan Absensi Resmi:</strong> Barcode mengarah ke <strong>https://kapeboonseen.vercel.app</strong></span>
       </div>
     </div>
-    <button id="btnRegenerateQr" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 py-2 rounded-lg text-xs font-bold transition">
+    <button id="btnRegenerateQr" class="w-full bg-[#5E391C] hover:bg-[#4A2E18] text-white py-2 rounded-lg text-xs font-bold transition shadow">
       Perbarui Tampilan Barcode
     </button>
   </div>
@@ -92,10 +97,11 @@
 
     <!-- AREA BARCODE / QR CODE -->
     <div class="py-2 flex flex-col items-center justify-center">
-      <div class="p-4 bg-white border-4 border-gray-900 rounded-2xl shadow-inner inline-block">
+      <div class="p-4 bg-white border-4 border-[#2C1810] rounded-2xl shadow-md inline-block">
         <div id="qrcodeCanvas"></div>
       </div>
-      <p class="text-[11px] text-gray-400 font-mono mt-2" id="qrTextLinkDisplay">http://localhost:3000</p>
+      <p class="text-xs font-black text-[#3A2010] font-mono mt-2.5 tracking-wide" id="qrTextLinkDisplay">https://kapeboonseen.vercel.app</p>
+      <p class="text-[11px] text-gray-500 font-medium mt-0.5">Arahkan kamera HP ke barcode atau buka link: <strong class="text-[#3A2010]">kapeboonseen.vercel.app</strong></p>
     </div>
 
     <!-- PETUNJUK 3 LANGKAH MUDAH -->
@@ -146,18 +152,23 @@
       document.getElementById('qrTextLinkDisplay').textContent = url;
     }
 
+    const OFFICIAL_ABSEN_URL = 'https://kapeboonseen.vercel.app';
+
     function updateStatusBanner(url) {
       const banner = document.getElementById('connectionStatusBanner');
       if (!banner) return;
-      if (url.startsWith('https://')) {
+      if (url === OFFICIAL_ABSEN_URL || url === OFFICIAL_ABSEN_URL + '/') {
         banner.className = 'mt-2 p-2.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-900 border border-emerald-300 flex items-center gap-2';
-        banner.innerHTML = '<span>✅ <strong>Tautan Online HTTPS Aktif:</strong> Barcode aman & bisa discan dari HP manapun (paket data 4G/5G maupun WiFi Kedai)!</span>';
-      } else if (url.includes('localhost')) {
+        banner.innerHTML = '<span>✅ <strong>Tautan Absensi Resmi Vercel:</strong> Barcode mengarah ke <strong>' + url + '</strong> (aman discan langsung oleh seluruh HP crew via 4G/5G maupun WiFi).</span>';
+      } else if (url.startsWith('https://')) {
+        banner.className = 'mt-2 p-2.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-900 border border-emerald-300 flex items-center gap-2';
+        banner.innerHTML = '<span>✅ <strong>Tautan Online HTTPS Aktif:</strong> Barcode mengarah ke <strong>' + url + '</strong></span>';
+      } else if (url.includes('localhost') || url.includes('127.0.0.1')) {
         banner.className = 'mt-2 p-2.5 rounded-lg text-xs font-medium bg-rose-50 text-rose-900 border border-rose-300 flex items-center gap-2';
-        banner.innerHTML = '<span>⚠️ <strong>Peringatan:</strong> Tautan masih "localhost". HP tidak bisa membuka localhost komputer. Sedang menyambungkan ke internet...</span>';
+        banner.innerHTML = '<span>⚠️ <strong>Peringatan:</strong> Tautan adalah "localhost". HP crew tidak bisa membuka localhost komputer Anda! Klik "Reset ke Link Resmi Vercel" di atas.</span>';
       } else {
         banner.className = 'mt-2 p-2.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-900 border border-blue-300 flex items-center gap-2';
-        banner.innerHTML = '<span>📶 <strong>Tautan WiFi Lokal:</strong> Pastikan HP crew terhubung ke jaringan WiFi yang sama dengan komputer kedai.</span>';
+        banner.innerHTML = '<span>📶 <strong>Tautan WiFi Lokal:</strong> Barcode mengarah ke ' + url + '. Pastikan HP crew terhubung ke WiFi kedai yang sama.</span>';
       }
     }
 
@@ -241,43 +252,31 @@
       } catch (e) {}
 
       const input = document.getElementById('qrUrlInput');
-      let targetUrl = window.location.origin;
+      
+      // Barcode HARUS selalu mengarah ke link absen resmi Vercel secara default
+      let targetUrl = OFFICIAL_ABSEN_URL;
 
-      // Hanya cari tunnel/IP lokal jika dibuka di localhost komputer
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        try {
-          const infoRes = await fetch('/api/server-info');
-          const info = await infoRes.json();
-          if (info.tunnel_url && info.tunnel_url.startsWith('https://')) {
-            targetUrl = info.tunnel_url;
-          } else if (info.local_url && !info.local_url.includes('localhost')) {
-            targetUrl = info.local_url;
-          }
-        } catch (e) {}
-
-        let pollCount = 0;
-        const pollInterval = setInterval(async () => {
-          pollCount++;
-          if (pollCount > 10) return clearInterval(pollInterval);
-          try {
-            const res = await fetch('/api/server-info');
-            const d = await res.json();
-            if (d.tunnel_url && input.value !== d.tunnel_url) {
-              input.value = d.tunnel_url;
-              generateQr(d.tunnel_url);
-              updateStatusBanner(d.tunnel_url);
-              clearInterval(pollInterval);
-            }
-          } catch (e) {}
-        }, 1500);
+      // Jika dibuka di browser dengan domain produksi HTTPS publik di luar localhost, gunakan origin jika valid
+      if (window.location.origin && window.location.origin.startsWith('https://') && !window.location.origin.includes('localhost')) {
+        targetUrl = window.location.origin;
       }
 
       input.value = targetUrl;
       generateQr(targetUrl);
       updateStatusBanner(targetUrl);
 
+      // Tombol reset cepat ke link resmi Vercel
+      const btnReset = document.getElementById('btnResetOfficialUrl');
+      if (btnReset) {
+        btnReset.addEventListener('click', () => {
+          input.value = OFFICIAL_ABSEN_URL;
+          generateQr(OFFICIAL_ABSEN_URL);
+          updateStatusBanner(OFFICIAL_ABSEN_URL);
+        });
+      }
+
       document.getElementById('btnRegenerateQr').addEventListener('click', () => {
-        const val = input.value.trim() || targetUrl;
+        const val = input.value.trim() || OFFICIAL_ABSEN_URL;
         generateQr(val);
         updateStatusBanner(val);
       });

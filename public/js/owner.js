@@ -167,10 +167,14 @@ async function verifyOwnerAccess(isManualSubmit = false) {
 
       loadTabContent(currentTab);
       checkPendingCorrections();
+      checkUnclosedAttendances();
 
-      // Mulai polling notifikasi koreksi setiap 20 detik
+      // Mulai polling notifikasi koreksi & presensi belum check-out setiap 20 detik
       if (!pendingCorrectionsPollTimer) {
-        pendingCorrectionsPollTimer = setInterval(checkPendingCorrections, 20000);
+        pendingCorrectionsPollTimer = setInterval(() => {
+          checkPendingCorrections();
+          checkUnclosedAttendances();
+        }, 20000);
       }
 
       return true;
@@ -593,8 +597,20 @@ function renderDailyTable(list) {
     // Kolom Aksi Edit & Hapus Catatan Presensi (Khusus Owner)
     let aksiHtml = '<span class="text-gray-400 font-mono text-xs">-</span>';
     if (authRole !== 'supervisor' && r.attendance_id) {
+      let forceCheckoutBtn = '';
+      if (r.status === 'CHECKED_IN' || !r.check_out_time) {
+        forceCheckoutBtn = `
+          <button type="button" onclick="openForceCheckoutModal(${r.attendance_id})" title="Selesaikan Check-Out Pegawai Ini"
+            class="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Check-Out-kan</span>
+          </button>
+        `;
+      }
+
       aksiHtml = `
-        <div class="flex items-center justify-center gap-1.5">
+        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+          ${forceCheckoutBtn}
           <button type="button" onclick="openEditAttendanceModal(${r.attendance_id})" title="Edit Data & Jam Presensi"
             class="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
             <i data-lucide="edit-2" class="w-3.5 h-3.5 text-amber-800"></i>
@@ -634,6 +650,250 @@ function renderDailyTable(list) {
   tbody.innerHTML = html;
   updateDailyStats(totalPresent, totalActive, totalCompleted);
   if (window.lucide) lucide.createIcons();
+}
+
+// ==================== CHECK-OUT PENGAMBILALIHAN OLEH OWNER (FORCE CHECK-OUT) ====================
+let currentUnclosedData = [];
+
+async function checkUnclosedAttendances() {
+  try {
+    const today = getTodayDateStr();
+    const res = await fetch(`/api/admin/attendance/unclosed?before=${today}`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    const alertEl = document.getElementById('unclosedAttendancesAlert');
+    const badgeEl = document.getElementById('unclosedAttendancesBadge');
+    const subtextEl = document.getElementById('unclosedAttendancesSubtext');
+
+    if (data.success && data.count > 0) {
+      currentUnclosedData = data.attendances || [];
+      if (alertEl) alertEl.classList.remove('hidden');
+      if (badgeEl) badgeEl.textContent = `${data.count} Pegawai`;
+      if (subtextEl) {
+        const names = currentUnclosedData.map(a => `${a.name} (${a.date})`).slice(0, 2).join(', ');
+        const more = currentUnclosedData.length > 2 ? ` dan ${currentUnclosedData.length - 2} lainnya` : '';
+        subtextEl.innerHTML = `Ada ${data.count} pegawai yang belum check-out dari hari sebelumnya: <strong>${names}${more}</strong>. Klik tombol untuk menyelesaikan.`;
+      }
+    } else {
+      currentUnclosedData = [];
+      if (alertEl) alertEl.classList.add('hidden');
+    }
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    console.warn('Gagal cek presensi belum checkout:', e);
+  }
+}
+
+async function openUnclosedListModal() {
+  const modal = document.getElementById('unclosedAttendancesModal');
+  const listEl = document.getElementById('unclosedAttendancesList');
+  if (!modal || !listEl) return;
+
+  listEl.innerHTML = '<div class="p-6 text-center text-gray-400 text-xs">Memuat daftar presensi belum check-out...</div>';
+  modal.classList.remove('hidden');
+
+  try {
+    const today = getTodayDateStr();
+    const res = await fetch(`/api/admin/attendance/unclosed?before=${today}`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.attendances || data.attendances.length === 0) {
+      listEl.innerHTML = `
+        <div class="p-8 text-center text-gray-400 text-xs space-y-2">
+          <i data-lucide="check-circle" class="w-8 h-8 text-emerald-500 mx-auto"></i>
+          <p class="font-bold text-gray-600">Semua presensi hari sebelumnya sudah terselesaikan dengan baik.</p>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    currentUnclosedData = data.attendances;
+    listEl.innerHTML = data.attendances.map(a => `
+      <div class="p-3.5 bg-rose-50/70 border border-rose-300 rounded-2xl space-y-2.5">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-xs bg-rose-200 text-rose-950 px-2 py-0.5 rounded">${a.employee_id}</span>
+              <h4 class="font-bold text-sm text-[#3A2010]">${a.name}</h4>
+              <span class="text-[11px] text-gray-500">(${a.role})</span>
+            </div>
+            <p class="text-xs text-gray-600 mt-1">
+              Tanggal: <strong class="text-rose-900">${a.date}</strong> | Masuk: <strong class="font-mono text-gray-900">${a.check_in_time || '-'}</strong>
+              ${a.scheduled_in ? ` | Shift: <span class="font-mono">${a.scheduled_in}</span>` : ''}
+            </p>
+          </div>
+          <button type="button" onclick="closeUnclosedModal(); openForceCheckoutModal(${a.attendance_id || a.id}, true)"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm whitespace-nowrap">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Check-Out-kan</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    listEl.innerHTML = `<div class="p-6 text-center text-rose-500 text-xs">Gagal: ${err.message}</div>`;
+  }
+}
+
+function closeUnclosedModal() {
+  const modal = document.getElementById('unclosedAttendancesModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+window.closeUnclosedModal = closeUnclosedModal;
+
+window.openForceCheckoutModal = async function(attendanceId, fromUnclosedList = false) {
+  if (authRole === 'supervisor') {
+    showToast('Hanya Owner yang berwenang menyelesaikan check-out pegawai.', 'error');
+    return;
+  }
+
+  // Cari di data harian atau data unclosed
+  let record = (currentDailyData || []).find(r => r.attendance_id === attendanceId || r.id === attendanceId);
+  if (!record && currentUnclosedData.length > 0) {
+    record = currentUnclosedData.find(r => (r.attendance_id || r.id) === attendanceId);
+  }
+
+  // Jika belum ditemukan di cache, ambil dari server
+  if (!record) {
+    try {
+      const res = await fetch('/api/admin/attendance/unclosed', { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (data.success && data.attendances) {
+        record = data.attendances.find(r => (r.attendance_id || r.id) === attendanceId);
+      }
+    } catch (e) {}
+  }
+
+  if (!record) {
+    showToast('Data presensi tidak ditemukan.', 'error');
+    return;
+  }
+
+  const attId = record.attendance_id || record.id;
+  document.getElementById('forceModalAttId').value = attId;
+  document.getElementById('forceModalEmpId').textContent = record.employee_id || 'CKBS--';
+  document.getElementById('forceModalEmpName').textContent = record.name || record.employee_id;
+  document.getElementById('forceModalDate').textContent = `Tanggal: ${record.date || getTodayDateStr()}`;
+  document.getElementById('forceModalCheckInTime').textContent = record.check_in_time || '15:00';
+  document.getElementById('forceModalScheduledIn').textContent = record.scheduled_in || '-';
+  document.getElementById('forceModalCheckInHidden').value = record.check_in_time || '15:00';
+
+  // Usulkan default jam pulang berdasarkan jam shift masuk
+  let defaultOut = '23:00';
+  if (record.scheduled_in === '15:00') defaultOut = '23:00';
+  else if (record.scheduled_in === '18:00') defaultOut = '01:00';
+  else if (record.scheduled_in === '19:00') defaultOut = '02:00';
+
+  document.getElementById('forceModalCheckOutTime').value = defaultOut;
+  document.getElementById('forceModalScheduledOut').value = defaultOut;
+  document.getElementById('forceModalNotes').value = `Check-out diselesaikan oleh Owner karena pegawai lupa presensi pulang (${record.date})`;
+
+  updateForceCheckoutDurationPreview();
+
+  const modal = document.getElementById('forceCheckoutModal');
+  if (modal) modal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+};
+
+function closeForceCheckoutModal() {
+  const modal = document.getElementById('forceCheckoutModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+window.closeForceCheckoutModal = closeForceCheckoutModal;
+
+window.setQuickForceTime = function(timeStr) {
+  const input = document.getElementById('forceModalCheckOutTime');
+  const schedOut = document.getElementById('forceModalScheduledOut');
+  if (input) input.value = timeStr;
+  if (schedOut) {
+    const options = Array.from(schedOut.options).map(o => o.value);
+    if (options.includes(timeStr)) schedOut.value = timeStr;
+  }
+  updateForceCheckoutDurationPreview();
+};
+
+function updateForceCheckoutDurationPreview() {
+  const checkIn = document.getElementById('forceModalCheckInHidden')?.value || '00:00';
+  const checkOut = document.getElementById('forceModalCheckOutTime')?.value || '00:00';
+  const liveEl = document.getElementById('forceModalDurationLive');
+  const noteEl = document.getElementById('forceModalDurationNote');
+  if (!liveEl) return;
+
+  const [hIn, mIn] = checkIn.split(':').map(Number);
+  const [hOut, mOut] = checkOut.split(':').map(Number);
+  let totalMinutes = (hOut * 60 + mOut) - (hIn * 60 + mIn);
+  let isOvernight = false;
+  if (totalMinutes < 0) {
+    totalMinutes += 24 * 60;
+    isOvernight = true;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  liveEl.textContent = `${hours} Jam ${mins} Menit (${totalMinutes} Menit)`;
+
+  if (isOvernight) {
+    if (noteEl) noteEl.textContent = `Shift malam (melewati tengah malam). Dihitung dari masuk ${checkIn} s/d keluar ${checkOut}.`;
+  } else {
+    if (noteEl) noteEl.textContent = `Dihitung otomatis dari jam masuk ${checkIn} s/d jam pulang ${checkOut}.`;
+  }
+}
+
+async function handleForceCheckoutSubmit(e) {
+  if (e) e.preventDefault();
+  const attId = document.getElementById('forceModalAttId').value;
+  const checkOutTime = document.getElementById('forceModalCheckOutTime').value.trim();
+  const scheduledOut = document.getElementById('forceModalScheduledOut').value.trim() || null;
+  const notes = document.getElementById('forceModalNotes').value.trim() || null;
+
+  if (!attId || !checkOutTime) {
+    showToast('Pilih jam check-out terlebih dahulu.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSubmitForceCheckout');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Menyimpan...';
+  }
+
+  try {
+    const res = await fetch('/api/admin/attendance/force-checkout', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        attendance_id: parseInt(attId, 10),
+        check_out_time: checkOutTime,
+        scheduled_out: scheduledOut,
+        notes: notes
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Check-out berhasil diselesaikan!', 'success');
+      closeForceCheckoutModal();
+      checkUnclosedAttendances();
+      loadDailyRecap();
+    } else {
+      showToast(data.message || 'Gagal menyelesaikan check-out.', 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span>Simpan & Selesaikan Check-Out</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 }
 
 // ==================== EDIT & HAPUS CATATAN ABSENSI (KHUSUS OWNER) ====================
@@ -1496,8 +1756,10 @@ async function openMobileOwnerQrModal() {
   container.innerHTML = 'Membuat barcode...';
   document.getElementById('mobileOwnerQrModal').classList.remove('hidden');
 
-  let targetUrl = window.location.origin + '/owner.html';
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  let targetUrl = 'https://kapeboonseen.vercel.app/owner.html';
+  if (window.location.origin && window.location.origin.startsWith('https://') && !window.location.origin.includes('localhost')) {
+    targetUrl = window.location.origin + '/owner.html';
+  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     try {
       const res = await fetch('/api/server-info');
       const d = await res.json();
@@ -1749,6 +2011,17 @@ function initOwnerApp() {
   document.getElementById('btnCancelDeleteSingleAtt')?.addEventListener('click', closeDeleteSingleAttendanceModal);
   document.getElementById('btnConfirmDeleteSingleAtt')?.addEventListener('click', confirmDeleteAttendance);
 
+  // Modal Presensi Belum Check-Out (Unclosed)
+  document.getElementById('btnOpenUnclosedListModal')?.addEventListener('click', openUnclosedListModal);
+  document.getElementById('btnCloseUnclosedModal')?.addEventListener('click', closeUnclosedModal);
+  document.getElementById('btnDoneUnclosedModal')?.addEventListener('click', closeUnclosedModal);
+
+  // Modal Selesaikan Check-Out Pegawai (Force Check-Out)
+  document.getElementById('btnCloseForceCheckoutModal')?.addEventListener('click', closeForceCheckoutModal);
+  document.getElementById('btnCancelForceCheckoutModal')?.addEventListener('click', closeForceCheckoutModal);
+  document.getElementById('formForceCheckout')?.addEventListener('submit', handleForceCheckoutSubmit);
+  document.getElementById('forceModalCheckOutTime')?.addEventListener('input', updateForceCheckoutDurationPreview);
+
   // Cek otentikasi awal saat halaman dibuka
   verifyOwnerAccess();
 
@@ -1757,6 +2030,7 @@ function initOwnerApp() {
     if (currentTab === 'tab-daily' && (ownerPin || (authEmpId && authEmpPin))) {
       loadDailyRecap();
       checkPendingCorrections();
+      checkUnclosedAttendances();
     }
   }, 15000);
 

@@ -160,6 +160,29 @@
       </button>
     </div>
 
+    <!-- Banner Notifikasi Presensi Belum Check-Out dari Hari Sebelumnya (KHUSUS OWNER) -->
+    <div id="unclosedAttendancesAlert" class="coffee-card p-3 sm:p-4 bg-gradient-to-r from-rose-900 to-amber-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg border-l-4 border-l-rose-500 hidden">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-300"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h4 class="font-bold text-xs sm:text-sm">Pegawai Belum Check-Out dari Hari Sebelumnya</h4>
+            <span id="unclosedAttendancesBadge" class="bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full text-[10px]">0</span>
+          </div>
+          <p id="unclosedAttendancesSubtext" class="text-xs text-rose-100 mt-0.5">
+            Ada pegawai yang belum melakukan check-out pada hari sebelumnya. Selesaikan sekarang agar perhitungan jam kerja akurat.
+          </p>
+        </div>
+      </div>
+      <button id="btnOpenUnclosedListModal" type="button" class="bg-white text-rose-950 px-4 py-2 rounded-xl text-xs font-black shadow hover:bg-rose-50 transition whitespace-nowrap flex items-center gap-1.5 self-stretch sm:self-auto justify-center">
+        <i data-lucide="clock" class="w-3.5 h-3.5 text-rose-700"></i>
+        <span>Selesaikan Check-Out</span>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+
 
     <!-- Navigasi Tab Menu (Horizontal Swipe di Layar HP) -->
     <nav class="flex gap-1.5 sm:gap-2 border-b border-amber-900/10 pb-2 overflow-x-auto no-scrollbar py-1">
@@ -734,6 +757,142 @@
           Tutup
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Daftar Presensi Belum Check-Out (Owner Only) -->
+  <div id="unclosedAttendancesModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-[#3A2010]">Presensi Belum Selesai (Check-Out)</h3>
+            <p class="text-[10px] text-gray-500">Daftar pegawai yang lupa check-out dari hari sebelumnya</p>
+          </div>
+        </div>
+        <button id="btnCloseUnclosedModal" type="button" class="text-gray-400 hover:text-gray-600 p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="unclosedAttendancesList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+        <div class="p-6 text-center text-gray-400 text-xs">Memuat daftar presensi...</div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-gray-100">
+        <button type="button" id="btnDoneUnclosedModal" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Selesaikan Check-Out Pegawai (Owner Force Check-Out) -->
+  <div id="forceCheckoutModal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+    <div class="coffee-card p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center">
+            <i data-lucide="log-out" class="w-4 h-4 text-amber-800"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-[#3A2010]">Selesaikan Check-Out Pegawai</h3>
+            <p class="text-[10px] text-gray-500">Ambil alih check-out untuk pegawai yang lupa presensi pulang</p>
+          </div>
+        </div>
+        <button id="btnCloseForceCheckoutModal" type="button" class="text-gray-400 hover:text-gray-600 p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Info Presensi Masuk -->
+      <div class="p-3 bg-amber-50/80 rounded-xl border border-amber-200 space-y-1.5 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-mono font-bold text-amber-950 bg-amber-200 px-2 py-0.5 rounded text-[11px]" id="forceModalEmpId">CKBS--</span>
+          <span class="text-gray-500 font-medium" id="forceModalDate">Tanggal: -</span>
+        </div>
+        <h4 class="font-bold text-sm text-[#3A2010]" id="forceModalEmpName">Nama Pegawai</h4>
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-600 pt-1 border-t border-amber-200/60">
+          <div>Jam Masuk Riil: <strong class="text-gray-900 font-mono" id="forceModalCheckInTime">-</strong></div>
+          <div>Shift Masuk: <strong class="text-gray-900 font-mono" id="forceModalScheduledIn">-</strong></div>
+        </div>
+      </div>
+
+      <form id="formForceCheckout" class="space-y-3.5 text-xs">
+        <input type="hidden" id="forceModalAttId">
+        <input type="hidden" id="forceModalCheckInHidden">
+
+        <!-- Input Jam Pulang / Check-Out -->
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">
+            Jam Kepulangan (Check-Out) <span class="text-rose-500">*</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <input type="time" step="60" id="forceModalCheckOutTime" required
+              class="flex-1 px-3 py-2 text-sm rounded-xl border border-gray-300 font-mono font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+          </div>
+          <p class="text-[10px] text-gray-400 mt-1">Pilih jam saat pegawai sebenarnya menyelesaikan shift / kedai tutup.</p>
+        </div>
+
+        <!-- Pilihan Cepat Jam Pulang (Quick Chips) -->
+        <div>
+          <label class="block font-semibold text-gray-600 text-[11px] mb-1.5">Pilihan Cepat Jam Pulang:</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="setQuickForceTime('22:00')" class="px-2.5 py-1 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded-lg text-xs font-mono font-bold border border-gray-200 transition">22:00</button>
+            <button type="button" onclick="setQuickForceTime('23:00')" class="px-2.5 py-1 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded-lg text-xs font-mono font-bold border border-gray-200 transition">23:00</button>
+            <button type="button" onclick="setQuickForceTime('23:30')" class="px-2.5 py-1 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded-lg text-xs font-mono font-bold border border-gray-200 transition">23:30</button>
+            <button type="button" onclick="setQuickForceTime('00:00')" class="px-2.5 py-1 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded-lg text-xs font-mono font-bold border border-gray-200 transition">00:00</button>
+            <button type="button" onclick="setQuickForceTime('01:00')" class="px-2.5 py-1 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded-lg text-xs font-mono font-bold border border-gray-200 transition">01:00</button>
+            <button type="button" onclick="setQuickForceTime('02:00')" class="px-2.5 py-1 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded-lg text-xs font-mono font-bold border border-gray-200 transition">02:00</button>
+          </div>
+        </div>
+
+        <!-- Shift Pulang (Jadwal) -->
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">Shift Pulang (Jadwal):</label>
+          <select id="forceModalScheduledOut" class="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono text-xs outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+            <option value="">-- Sesuaikan Otomatis dengan Jam Pulang --</option>
+            <option value="22:00">22:00</option>
+            <option value="23:00">23:00</option>
+            <option value="00:00">00:00</option>
+            <option value="01:00">01:00</option>
+            <option value="02:00">02:00</option>
+          </select>
+        </div>
+
+        <!-- Real-time Preview Durasi Kerja -->
+        <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-emerald-900 flex items-center gap-1">
+              <i data-lucide="calculator" class="w-3.5 h-3.5 text-emerald-700"></i>
+              Kalkulasi Durasi Kerja:
+            </span>
+            <span id="forceModalDurationLive" class="font-black text-sm text-emerald-800 font-mono">0 Jam 0 Menit</span>
+          </div>
+          <p class="text-[10px] text-emerald-700" id="forceModalDurationNote">
+            Dihitung otomatis dari jam check-in ke jam check-out yang Anda tentukan.
+          </p>
+        </div>
+
+        <!-- Catatan / Audit Note -->
+        <div>
+          <label class="block font-semibold text-gray-700 mb-1">Catatan Tambahan (Opsional):</label>
+          <input type="text" id="forceModalNotes" placeholder="Contoh: Pegawai lupa check-out, diselesaikan Owner"
+            class="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs outline-none focus:ring-2 focus:ring-[#8B5A2B]">
+        </div>
+
+        <!-- Aksi Form -->
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+          <button type="button" id="btnCancelForceCheckoutModal" class="px-3.5 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium">Batal</button>
+          <button type="submit" id="btnSubmitForceCheckout" class="btn-coffee px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+            <span>Simpan & Selesaikan Check-Out</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

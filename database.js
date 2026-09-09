@@ -400,12 +400,20 @@ async function initDatabase() {
 
 // Rumus Haversine: Menghitung jarak GPS dalam satuan meter
 function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
-  if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) return 0;
+  if (lat1 === null || lon1 === null || lat2 === null || lon2 === null || 
+      lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined ||
+      isNaN(Number(lat1)) || isNaN(Number(lon1)) || isNaN(Number(lat2)) || isNaN(Number(lon2))) {
+    return 999999;
+  }
+  const nLat1 = Number(lat1);
+  const nLon1 = Number(lon1);
+  const nLat2 = Number(lat2);
+  const nLon2 = Number(lon2);
   const R = 6371e3; // Radius bumi dalam meter
-  const p1 = (lat1 * Math.PI) / 180;
-  const p2 = (lat2 * Math.PI) / 180;
-  const dp = ((lat2 - lat1) * Math.PI) / 180;
-  const dl = ((lon2 - lon1) * Math.PI) / 180;
+  const p1 = (nLat1 * Math.PI) / 180;
+  const p2 = (nLat2 * Math.PI) / 180;
+  const dp = ((nLat2 - nLat1) * Math.PI) / 180;
+  const dl = ((nLon2 - nLon1) * Math.PI) / 180;
 
   const a =
     Math.sin(dp / 2) * Math.sin(dp / 2) +
@@ -882,6 +890,155 @@ async function performCheckOut(attendanceId, timeStr, lat, lng, distance, totalM
     saveJsonStore();
   }
   return { changes: 1 };
+}
+
+// 2b. Check-Out Pengambilalihan oleh Owner (Untuk pegawai yang lupa check-out)
+async function ownerForceCheckOut(attendanceId, checkOutTime, scheduledOut = null, notes = null) {
+  const idNum = Number(attendanceId);
+
+  let record = null;
+  if (TURSO_URL && TURSO_TOKEN) {
+    const res = await tursoExecute('SELECT * FROM attendances WHERE id = ?', [idNum]);
+    record = res.rows && res.rows[0];
+  } else if (db) {
+    record = db.prepare('SELECT * FROM attendances WHERE id = ?').get(idNum);
+  } else {
+    const store = loadJsonStore();
+    record = store.attendances.find(a => a.id === idNum);
+  }
+
+  if (!record) {
+    throw new Error('Data presensi tidak ditemukan');
+  }
+
+  // Format checkOutTime: pastikan format HH:mm:ss atau HH:mm
+  let formattedOut = String(checkOutTime).trim();
+  if (formattedOut.length === 5) {
+    formattedOut += ':00';
+  }
+
+  // Hitung durasi kerja dari check_in_time ke formattedOut
+  let totalMinutes = 0;
+  if (record.check_in_time) {
+    const [hIn, mIn] = record.check_in_time.split(':').map(Number);
+    const [hOut, mOut] = formattedOut.split(':').map(Number);
+    totalMinutes = (hOut * 60 + mOut) - (hIn * 60 + mIn);
+    if (totalMinutes < 0) {
+      totalMinutes += 24 * 60; // Shift malam lewat tengah malam
+    }
+  }
+
+  const finalNotes = (record.notes ? record.notes + ' | ' : '') + 
+    (notes ? notes.trim() : `Check-out diselesaikan oleh Owner (Jam: ${formattedOut.substring(0, 5)})`);
+
+  const finalScheduledOut = scheduledOut || record.scheduled_out || formattedOut.substring(0, 5);
+
+  if (TURSO_URL && TURSO_TOKEN) {
+    await tursoExecute(`
+      UPDATE attendances 
+      SET check_out_time = ?,
+          total_minutes = ?,
+          status = 'COMPLETED',
+          scheduled_out = ?,
+          notes = ?
+      WHERE id = ?
+    `, [formattedOut, totalMinutes, finalScheduledOut, finalNotes, idNum]);
+  } else if (db) {
+    const stmt = db.prepare(`
+      UPDATE attendances 
+      SET check_out_time = ?,
+          total_minutes = ?,
+          status = 'COMPLETED',
+          scheduled_out = ?,
+          notes = ?
+      WHERE id = ?
+    `);
+    stmt.run(formattedOut, totalMinutes, finalScheduledOut, finalNotes, idNum);
+  } else {
+    const store = loadJsonStore();
+    const att = store.attendances.find(a => a.id === idNum);
+    if (att) {
+      att.check_out_time = formattedOut;
+      att.total_minutes = totalMinutes;
+      att.status = 'COMPLETED';
+      att.scheduled_out = finalScheduledOut;
+      att.notes = finalNotes;
+      saveJsonStore();
+    }
+  }
+
+  return {
+    success: true,
+    attendance_id: idNum,
+    employee_id: record.employee_id,
+    date: record.date,
+    check_in_time: record.check_in_time,
+    check_out_time: formattedOut,
+    total_minutes: totalMinutes,
+    scheduled_out: finalScheduledOut,
+    formatted_duration: formatMinutesToHours(totalMinutes)
+  };
+}
+
+// 2c. Dapatkan Daftar Presensi yang Belum Check-Out (status = 'CHECKED_IN' & check_out_time IS NULL)
+async function getUnclosedAttendances(beforeDateStr = null) {
+  let querySql = `
+    SELECT a.id as attendance_id, a.id, a.employee_id, COALESCE(e.name, a.employee_id) as name,
+           COALESCE(e.role, 'Crew') as role, a.date, a.check_in_time, a.check_out_time,
+           a.scheduled_in, a.scheduled_out, a.status, a.notes
+    FROM attendances a
+    LEFT JOIN employees e ON UPPER(a.employee_id) = UPPER(e.employee_id)
+    WHERE a.status = 'CHECKED_IN' AND (a.check_out_time IS NULL OR a.check_out_time = '')
+  `;
+  const params = [];
+  if (beforeDateStr) {
+    querySql += ' AND a.date < ?';
+    params.push(beforeDateStr);
+  }
+  querySql += ' ORDER BY a.date ASC, a.check_in_time ASC';
+
+  if (TURSO_URL && TURSO_TOKEN) {
+    try {
+      const res = await tursoExecute(querySql, params);
+      return res.rows || [];
+    } catch (e) {
+      console.error('getUnclosedAttendances Turso error:', e);
+    }
+  }
+
+  if (db) {
+    return db.prepare(querySql).all(...params);
+  }
+
+  const store = loadJsonStore();
+  const empMap = new Map(store.employees.map(e => [e.employee_id.toUpperCase(), e]));
+  return store.attendances
+    .filter(a => {
+      const isUnclosed = a.status === 'CHECKED_IN' && (!a.check_out_time || a.check_out_time === '');
+      if (!isUnclosed) return false;
+      if (beforeDateStr) {
+        return a.date < beforeDateStr;
+      }
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.check_in_time || '').localeCompare(b.check_in_time || ''))
+    .map(a => {
+      const emp = empMap.get((a.employee_id || '').toUpperCase()) || {};
+      return {
+        attendance_id: a.id,
+        id: a.id,
+        employee_id: a.employee_id,
+        name: emp.name || a.employee_id,
+        role: emp.role || 'Crew',
+        date: a.date,
+        check_in_time: a.check_in_time,
+        check_out_time: a.check_out_time,
+        scheduled_in: a.scheduled_in,
+        scheduled_out: a.scheduled_out,
+        status: a.status,
+        notes: a.notes
+      };
+    });
 }
 
 // ==================== ALUR KOREKSI / BATAL CHECK-OUT ====================
@@ -1914,6 +2071,8 @@ module.exports = {
   getTodayAttendance,
   createCheckIn,
   performCheckOut,
+  ownerForceCheckOut,
+  getUnclosedAttendances,
   requestCheckoutCorrection,
   approveCheckoutCorrection,
   rejectCheckoutCorrection,

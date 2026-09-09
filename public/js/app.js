@@ -109,69 +109,85 @@ async function fetchShopSettings() {
   }
 }
 
-// Dapatkan Lokasi GPS Pengguna
+// Dapatkan Lokasi GPS Pengguna (Mengembalikan Promise agar bisa di-await)
 function requestGpsLocation() {
-  const statusText = document.getElementById('gpsStatusText');
-  const distanceInfo = document.getElementById('gpsDistanceInfo');
-  const badge = document.getElementById('gpsBadge');
-  const banner = document.getElementById('gpsBanner');
+  return new Promise((resolve) => {
+    const statusText = document.getElementById('gpsStatusText');
+    const distanceInfo = document.getElementById('gpsDistanceInfo');
+    const badge = document.getElementById('gpsBadge');
+    const banner = document.getElementById('gpsBanner');
 
-  if (!navigator.geolocation) {
-    statusText.textContent = 'Browser ini tidak mendukung GPS.';
-    distanceInfo.textContent = 'Fitur GPS tidak tersedia di browser Anda.';
-    badge.className = 'badge-status bg-rose-100 text-rose-800';
-    badge.textContent = 'GPS Error';
-    return;
-  }
-
-  statusText.textContent = 'Mendeteksi posisi GPS...';
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      userGps = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy: Math.round(pos.coords.accuracy)
-      };
-
-      // Hitung jarak ke kedai
-      gpsDistance = calculateDistance(
-        userGps.lat,
-        userGps.lng,
-        shopSettings.latitude,
-        shopSettings.longitude
-      );
-
-      isWithinArea = gpsDistance <= shopSettings.radius_meters;
-
-      if (isWithinArea || !shopSettings.gps_enforced) {
-        statusText.textContent = `Posisi akurat (Akurasi ~${userGps.accuracy}m)`;
-        distanceInfo.innerHTML = `Jarak: <strong>${gpsDistance} meter</strong> (Dalam area kedai)`;
-        badge.className = 'badge-status badge-present';
-        badge.textContent = 'Di Area Kedai ✓';
-        banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-emerald-50 text-emerald-900 border border-emerald-200';
-      } else {
-        statusText.textContent = `Terlalu jauh dari kedai`;
-        distanceInfo.innerHTML = `Jarak: <strong>${gpsDistance} meter</strong> (Maks. ${shopSettings.radius_meters}m)`;
+    if (!navigator.geolocation) {
+      if (statusText) statusText.textContent = 'Browser ini tidak mendukung GPS.';
+      if (distanceInfo) distanceInfo.textContent = 'Fitur GPS tidak tersedia di browser Anda.';
+      if (badge) {
         badge.className = 'badge-status bg-rose-100 text-rose-800';
-        badge.textContent = 'Di Luar Kedai ✕';
-        banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-rose-50 text-rose-900 border border-rose-200';
+        badge.textContent = 'GPS Error';
       }
+      isWithinArea = false;
+      renderAttendanceState();
+      return resolve(null);
+    }
 
-      renderAttendanceState();
-      if (window.lucide) lucide.createIcons();
-    },
-    (err) => {
-      console.warn('GPS Error:', err.message);
-      statusText.textContent = 'Izin lokasi GPS belum diaktifkan';
-      distanceInfo.textContent = 'Izinkan akses lokasi/GPS pada browser HP Anda agar bisa absensi.';
-      badge.className = 'badge-status bg-amber-100 text-amber-800';
-      badge.textContent = 'Perlu Izin GPS';
-      banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-amber-50 text-amber-900 border border-amber-200';
-      renderAttendanceState();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
-  );
+    if (statusText) statusText.textContent = 'Mendeteksi posisi GPS...';
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userGps = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy)
+        };
+
+        // Hitung jarak ke kedai
+        gpsDistance = calculateDistance(
+          userGps.lat,
+          userGps.lng,
+          shopSettings.latitude,
+          shopSettings.longitude
+        );
+
+        isWithinArea = gpsDistance <= shopSettings.radius_meters;
+
+        if (isWithinArea || !shopSettings.gps_enforced) {
+          if (statusText) statusText.textContent = `Posisi akurat (Akurasi ~${userGps.accuracy}m)`;
+          if (distanceInfo) distanceInfo.innerHTML = `Jarak: <strong>${gpsDistance} meter</strong> (Dalam area kedai)`;
+          if (badge) {
+            badge.className = 'badge-status badge-present';
+            badge.textContent = 'Di Area Kedai ✓';
+          }
+          if (banner) banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-emerald-50 text-emerald-900 border border-emerald-200';
+        } else {
+          if (statusText) statusText.textContent = `Terlalu jauh dari kedai`;
+          if (distanceInfo) distanceInfo.innerHTML = `Jarak: <strong>${gpsDistance} meter</strong> (Maks. ${shopSettings.radius_meters}m)`;
+          if (badge) {
+            badge.className = 'badge-status bg-rose-100 text-rose-800';
+            badge.textContent = 'Di Luar Kedai ✕';
+          }
+          if (banner) banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-rose-50 text-rose-900 border border-rose-200';
+        }
+
+        renderAttendanceState();
+        if (window.lucide) lucide.createIcons();
+        resolve(userGps);
+      },
+      (err) => {
+        console.warn('GPS Error:', err.message);
+        userGps = null;
+        isWithinArea = false;
+        if (statusText) statusText.textContent = 'Izin lokasi GPS belum diaktifkan';
+        if (distanceInfo) distanceInfo.textContent = 'Izinkan akses lokasi/GPS pada browser HP Anda agar bisa absensi.';
+        if (badge) {
+          badge.className = 'badge-status bg-amber-100 text-amber-800';
+          badge.textContent = 'Perlu Izin GPS';
+        }
+        if (banner) banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-amber-50 text-amber-900 border border-amber-200';
+        renderAttendanceState();
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+    );
+  });
 }
 
 // Cek Status Absensi & Ringkasan Pegawai
@@ -526,7 +542,13 @@ function startCheckoutLockCountdown() {
       if (btnOut) {
         btnOut.disabled = false;
         btnOut.onclick = handleCheckOut;
-        if (!btnOut.classList.contains('btn-checkout')) {
+        if (shopSettings.gps_enforced && !isWithinArea) {
+          btnOut.className = 'w-full bg-rose-600 hover:bg-rose-700 text-white py-4 rounded-xl text-base font-bold flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.99]';
+          btnOut.innerHTML = `
+            <i data-lucide="map-pin-off" class="w-5 h-5"></i>
+            <span>CHECK OUT (DI LUAR RADIUS KEDAI)</span>
+          `;
+        } else {
           btnOut.className = 'w-full btn-checkout py-4 rounded-xl text-base font-bold flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.99]';
           btnOut.innerHTML = `
             <i data-lucide="log-out" class="w-5 h-5"></i>
@@ -535,7 +557,22 @@ function startCheckoutLockCountdown() {
         }
       }
       if (lockBanner) {
-        lockBanner.classList.add('hidden');
+        if (shopSettings.gps_enforced && !isWithinArea) {
+          lockBanner.classList.remove('hidden');
+          lockBanner.className = 'p-3 bg-rose-50 rounded-xl border border-rose-300 text-xs text-left';
+          lockBanner.innerHTML = `
+            <div class="flex items-center gap-2 font-bold text-rose-900">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+              <span>Peringatan Radius Kedai</span>
+            </div>
+            <p class="text-[11px] text-rose-700 mt-1 leading-relaxed">
+              Jarak Anda saat ini: <strong>${gpsDistance !== null ? gpsDistance + ' meter' : 'GPS belum terdeteksi'}</strong> (Batas toleransi radius: <strong>${shopSettings.radius_meters} meter</strong>).
+              Anda harus berada di dalam area kedai untuk menyelesaikan Check-Out.
+            </p>
+          `;
+        } else {
+          lockBanner.classList.add('hidden');
+        }
       }
     }
     if (window.lucide) lucide.createIcons();
@@ -584,6 +621,24 @@ function updateSummaryUI(summary) {
 
 // ==================== PROSES CHECK-IN ====================
 async function handleCheckIn() {
+  const btn = document.getElementById('btnDoCheckIn');
+  if (btn) btn.disabled = true;
+
+  // Segarkan posisi GPS terbaru sebelum melanjutkan
+  await requestGpsLocation();
+  if (btn) btn.disabled = false;
+
+  if (shopSettings.gps_enforced && !isWithinArea) {
+    showToast(
+      userGps
+        ? `Check-In gagal! Anda berada di luar area kedai (${gpsDistance} meter). Batas radius maksimal: ${shopSettings.radius_meters} meter. Silakan mendekat ke area kedai.`
+        : 'Check-In gagal! Lokasi GPS HP Anda belum terdeteksi. Pastikan GPS aktif dan izinkan browser mengakses lokasi.',
+      'error'
+    );
+    renderAttendanceState();
+    return;
+  }
+
   const currentTime = getCurrentTimeStr();
 
   // Validasi Shift & Peringatan Terlambat (+30 Menit)
@@ -611,6 +666,18 @@ async function handleCheckIn() {
 // Eksekusi Simpan Check-In ke Server
 async function executeCheckIn(isLate) {
   document.getElementById('lateWarningModal').classList.add('hidden');
+
+  // Validasi radius sebelum eksekusi
+  if (shopSettings.gps_enforced && !isWithinArea) {
+    showToast(
+      userGps
+        ? `Check-In gagal! Anda berada di luar area kedai (${gpsDistance} meter, batas: ${shopSettings.radius_meters} meter).`
+        : 'Check-In gagal! Lokasi GPS HP tidak terdeteksi.',
+      'error'
+    );
+    renderAttendanceState();
+    return;
+  }
 
   const btn = document.getElementById('btnDoCheckIn');
   if (btn) {
@@ -644,7 +711,7 @@ async function executeCheckIn(isLate) {
       showToast(data.message, data.is_late ? 'error' : 'success');
       await checkAttendanceStatus();
     } else {
-      showToast(data.message, 'error');
+      showToast(data.message || 'Check-In gagal!', 'error');
       renderAttendanceState();
     }
   } catch (err) {
@@ -654,9 +721,25 @@ async function executeCheckIn(isLate) {
 }
 
 // ==================== PROSES CHECK-OUT ====================
-window.handleCheckOut = function() {
+window.handleCheckOut = async function() {
   const btn = document.getElementById('btnDoCheckOut');
   if (btn && btn.disabled) return;
+
+  // Segarkan GPS secara realtime sebelum konfirmasi
+  if (btn) btn.disabled = true;
+  await requestGpsLocation();
+  if (btn) btn.disabled = false;
+
+  if (shopSettings.gps_enforced && !isWithinArea) {
+    showToast(
+      userGps
+        ? `Check-Out gagal! Anda berada di luar area kedai (${gpsDistance} meter). Batas toleransi radius: ${shopSettings.radius_meters} meter. Check-Out hanya dapat dilakukan di dalam kedai.`
+        : 'Check-Out gagal! Lokasi GPS HP Anda belum terdeteksi. Pastikan GPS aktif dan izinkan browser mengakses lokasi.',
+      'error'
+    );
+    renderAttendanceState();
+    return;
+  }
 
   const modal = document.getElementById('confirmCheckOutModal');
   if (modal) {
@@ -674,6 +757,19 @@ window.handleCheckOut = function() {
 window.executeCheckOut = async function() {
   const modal = document.getElementById('confirmCheckOutModal');
   if (modal) modal.classList.add('hidden');
+
+  // Verifikasi GPS sekali lagi sebelum pengiriman data
+  await requestGpsLocation();
+  if (shopSettings.gps_enforced && !isWithinArea) {
+    showToast(
+      userGps
+        ? `Check-Out gagal! Anda berada di luar area kedai (${gpsDistance} meter). Batas radius maksimal: ${shopSettings.radius_meters} meter. Silakan mendekat ke area kedai.`
+        : 'Check-Out gagal! Lokasi GPS HP belum terdeteksi. Pastikan GPS HP aktif.',
+      'error'
+    );
+    renderAttendanceState();
+    return;
+  }
 
   const btn = document.getElementById('btnDoCheckOut');
   if (btn) {
@@ -904,6 +1000,55 @@ function showAttendanceUI() {
   requestGpsLocation();
   checkAttendanceStatus();
 
+  // Pemantauan lokasi GPS berkelanjutan agar status radius selalu akurat
+  if (navigator.geolocation && navigator.geolocation.watchPosition) {
+    if (window.crewGpsWatchId) {
+      navigator.geolocation.clearWatch(window.crewGpsWatchId);
+    }
+    window.crewGpsWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        userGps = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy)
+        };
+        gpsDistance = calculateDistance(
+          userGps.lat,
+          userGps.lng,
+          shopSettings.latitude,
+          shopSettings.longitude
+        );
+        isWithinArea = gpsDistance <= shopSettings.radius_meters;
+
+        const statusText = document.getElementById('gpsStatusText');
+        const distanceInfo = document.getElementById('gpsDistanceInfo');
+        const badge = document.getElementById('gpsBadge');
+        const banner = document.getElementById('gpsBanner');
+
+        if (isWithinArea || !shopSettings.gps_enforced) {
+          if (statusText) statusText.textContent = `Posisi akurat (Akurasi ~${userGps.accuracy}m)`;
+          if (distanceInfo) distanceInfo.innerHTML = `Jarak: <strong>${gpsDistance} meter</strong> (Dalam area kedai)`;
+          if (badge) {
+            badge.className = 'badge-status badge-present';
+            badge.textContent = 'Di Area Kedai ✓';
+          }
+          if (banner) banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-emerald-50 text-emerald-900 border border-emerald-200';
+        } else {
+          if (statusText) statusText.textContent = `Terlalu jauh dari kedai`;
+          if (distanceInfo) distanceInfo.innerHTML = `Jarak: <strong>${gpsDistance} meter</strong> (Batas maks: ${shopSettings.radius_meters}m)`;
+          if (badge) {
+            badge.className = 'badge-status bg-rose-100 text-rose-800';
+            badge.textContent = 'Di Luar Kedai ✕';
+          }
+          if (banner) banner.className = 'p-2.5 rounded-xl text-xs flex items-center justify-between bg-rose-50 text-rose-900 border border-rose-200';
+        }
+        renderAttendanceState();
+      },
+      (err) => console.warn('GPS Watch:', err.message),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+    );
+  }
+
   // Polling otomatis setiap 15 detik (agar persetujuan koreksi dari Owner langsung terupdate)
   if (!statusPollInterval) {
     statusPollInterval = setInterval(checkAttendanceStatus, 15000);
@@ -915,6 +1060,11 @@ function handleLogout() {
   currentPin = '';
   attendanceRecord = null;
   localStorage.removeItem('crew_session');
+
+  if (window.crewGpsWatchId && navigator.geolocation) {
+    navigator.geolocation.clearWatch(window.crewGpsWatchId);
+    window.crewGpsWatchId = null;
+  }
 
   if (checkoutLockInterval) {
     clearInterval(checkoutLockInterval);
