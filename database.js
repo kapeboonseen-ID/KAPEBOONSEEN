@@ -1309,13 +1309,13 @@ async function approveShiftCorrection(attendanceId) {
   const newShift = record.requested_shift_in || record.scheduled_in;
   const inTime = record.check_in_time || '00:00:00';
 
-  // Hitung ulang keterlambatan terhadap jam shift baru
+  // Hitung ulang keterlambatan terhadap jam shift baru (+15 Menit)
   let isLate = 0;
   if (newShift) {
     const [schedH, schedM] = newShift.split(':').map(Number);
     const [nowH, nowM] = inTime.split(':').map(Number);
     const diff = (nowH * 60 + nowM) - (schedH * 60 + schedM);
-    if (diff >= 30) isLate = 1;
+    if (diff >= 15) isLate = 1;
   }
 
   const noteMsg = `Koreksi shift masuk disetujui: ${record.scheduled_in || '-'} ➔ ${newShift}`;

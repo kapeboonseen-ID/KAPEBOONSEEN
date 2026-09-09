@@ -275,7 +275,7 @@ async function handleRequest(req, res) {
         });
       }
 
-      // 4. CHECK IN Pegawai (Dengan Pilihan Waktu & Deteksi Keterlambatan +30 Menit)
+      // 4. CHECK IN Pegawai (Dengan Pilihan Waktu & Deteksi Keterlambatan +15 Menit)
       if (pathname === '/api/attendance/check-in' && method === 'POST') {
         const { employee_id, pin, lat, lng, date, time, scheduled_in } = await parseJsonBody(req);
 
@@ -324,13 +324,13 @@ async function handleRequest(req, res) {
           }
         }
 
-        // Logika Pilihan Waktu & Keterlambatan (+30 Menit)
+        // Logika Pilihan Waktu & Keterlambatan (+15 Menit)
         let isLate = 0;
         if (settings.shift_time_enabled !== '0' && scheduled_in) {
           const [schedH, schedM] = scheduled_in.split(':').map(Number);
           const [nowH, nowM] = time.split(':').map(Number);
           const diffMinutes = (nowH * 60 + nowM) - (schedH * 60 + schedM);
-          if (diffMinutes >= 30) {
+          if (diffMinutes >= 15) {
             isLate = 1;
           }
         }

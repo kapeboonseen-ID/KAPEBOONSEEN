@@ -361,7 +361,7 @@ async function openCorrectionsReviewModal() {
 
             <div class="p-2 rounded-lg bg-purple-100/60 text-[11px] text-purple-900 flex items-center gap-1.5">
               <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 text-purple-700"></i>
-              <span>Jika disetujui, shift masuk akan diubah menjadi ${c.requested_shift_in} dan status keterlambatan (+30 menit) otomatis dihitung ulang.</span>
+              <span>Jika disetujui, shift masuk akan diubah menjadi ${c.requested_shift_in} dan status keterlambatan (+15 menit) otomatis dihitung ulang.</span>
             </div>
 
             <div class="flex items-center gap-2 pt-1">
@@ -473,7 +473,7 @@ window.handleRejectCorrection = async function(attendanceId) {
 };
 
 window.handleApproveShiftCorrection = async function(attendanceId) {
-  if (!confirm('Setujui koreksi jam shift ini? Jam shift masuk dan status keterlambatan (+30 menit) akan otomatis dihitung ulang.')) {
+  if (!confirm('Setujui koreksi jam shift ini? Jam shift masuk dan status keterlambatan (+15 menit) akan otomatis dihitung ulang.')) {
     return;
   }
   try {
@@ -573,9 +573,9 @@ function renderDailyTable(list) {
     const distText = r.check_in_distance !== null ? `${r.check_in_distance} m` : '-';
     const durText = r.formatted_duration ? r.formatted_duration.textShort : '-';
 
-    // Tag Keterlambatan (+30 Menit)
+    // Tag Keterlambatan (+15 Menit)
     const lateBadge = r.is_late === 1
-      ? '<span class="px-1.5 py-0.5 bg-rose-100 text-rose-800 font-bold rounded text-[10px] border border-rose-300 ml-1">Terlambat (+30m)</span>'
+      ? '<span class="px-1.5 py-0.5 bg-rose-100 text-rose-800 font-bold rounded text-[10px] border border-rose-300 ml-1">Terlambat (+15m)</span>'
       : '';
 
     // Shift info
@@ -1058,7 +1058,7 @@ function exportDailyExcel() {
       r.role,
       r.scheduled_in || '-',
       r.check_in_time || '-',
-      r.is_late === 1 ? 'Terlambat (+30m)' : (r.check_in_time ? 'Tepat Waktu' : '-'),
+      r.is_late === 1 ? 'Terlambat (+15m)' : (r.check_in_time ? 'Tepat Waktu' : '-'),
       r.check_out_time || '-',
       r.check_in_distance !== null ? r.check_in_distance : '-',
       r.total_minutes || 0,
@@ -1091,7 +1091,7 @@ function exportDailyCsv() {
       r.role,
       r.scheduled_in || '-',
       r.check_in_time || '-',
-      r.is_late === 1 ? 'Terlambat (+30m)' : (r.check_in_time ? 'Tepat Waktu' : '-'),
+      r.is_late === 1 ? 'Terlambat (+15m)' : (r.check_in_time ? 'Tepat Waktu' : '-'),
       r.check_out_time || '-',
       r.check_in_distance !== null ? r.check_in_distance : '-',
       r.total_minutes || 0,

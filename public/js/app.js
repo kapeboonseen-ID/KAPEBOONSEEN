@@ -262,7 +262,7 @@ function renderAttendanceState() {
             ${pills}
           </div>
           <p class="text-[10px] text-gray-500 italic">
-            *Jika check-in terlambat &ge; 30 menit dari jam shift, sistem akan mencatat keterlambatan.
+            *Jika check-in terlambat &ge; 15 menit dari jam shift, sistem akan mencatat keterlambatan.
           </p>
         </div>
       `;
@@ -641,13 +641,13 @@ async function handleCheckIn() {
 
   const currentTime = getCurrentTimeStr();
 
-  // Validasi Shift & Peringatan Terlambat (+30 Menit)
+  // Validasi Shift & Peringatan Terlambat (+15 Menit)
   if (shopSettings.shift_time_enabled !== false && selectedShiftIn) {
     const [schedH, schedM] = selectedShiftIn.split(':').map(Number);
     const [nowH, nowM] = currentTime.split(':').map(Number);
     const diffMinutes = (nowH * 60 + nowM) - (schedH * 60 + schedM);
 
-    if (diffMinutes >= 30) {
+    if (diffMinutes >= 15) {
       // Munculkan Pop Up Peringatan Keterlambatan
       document.getElementById('lateWarningDetails').textContent = 
         `Jadwal Shift: ${selectedShiftIn} | Waktu Saat Ini: ${currentTime} (Terlambat ${diffMinutes} menit).`;
